@@ -25,8 +25,8 @@
 import google_action
 import google_result_queue
 import logging
-import provisioning
-import provisioning_errs
+from google.appsforyourdomain import provisioning
+from google.appsforyourdomain import provisioning_errs
 
 
 class AddedUserGoogleAction(google_action.GoogleAction):
@@ -50,8 +50,6 @@ class AddedUserGoogleAction(google_action.GoogleAction):
     self.attrs = None # public
     self._api = api
     self._result_queue = result_queue
-    if 'vars' in moreargs:
-      self.quota = moreargs['vars'].quota
 
   def Handle(self, dn, attrs):
     """ Override of superclass.Handle() method.
@@ -64,11 +62,14 @@ class AddedUserGoogleAction(google_action.GoogleAction):
     try:
       logging.debug('about to CreateAccount for %s' % \
                     self.attrs['GoogleUsername'])
+      moreargs = {}
+      if 'GoogleQuota' in self.attrs:
+        moreargs['quota'] = self.attrs['GoogleQuota']
       self._api.CreateAccountWithEmail(self.attrs['GoogleFirstName'],
                               self.attrs['GoogleLastName'],
                               self.attrs['GooglePassword'],
                               self.attrs['GoogleUsername'],
-                              quota=self.quota)
+                              **moreargs)
       self._result_queue.PutResult(self.dn, 'added')
       self._thread_stats.IncrementStat('adds', 1)
     except provisioning_errs.ProvisioningApiError, e:

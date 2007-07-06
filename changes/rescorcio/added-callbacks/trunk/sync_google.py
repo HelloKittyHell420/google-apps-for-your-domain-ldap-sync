@@ -22,24 +22,21 @@ class SyncGoogle:  the class that does it
 """
 
 
-import logging
-import threading
-import Queue
-
-import messages
-import google_result_handler
-import google_result_queue
-import utils
-import provisioning
-import provisioning_errs
-import provisioning_auth
-import provisioning_backend
 import added_user_google_action
 import exited_user_google_action
 import updated_user_google_action
 import renamed_user_google_action
-
-import sync_ldap_messages
+import logging
+import messages
+import Queue
+import threading
+import google_result_handler
+import google_result_queue
+import utils
+from google.appsforyourdomain import provisioning
+from google.appsforyourdomain import provisioning_errs
+from google.appsforyourdomain import provisioning_auth
+from google.appsforyourdomain import provisioning_backend
 
 # globals governing the threading system
 QUEUE_TIMEOUT = 20
@@ -144,9 +141,8 @@ class SyncGoogle(utils.Configurable):
                   'domain': messages.MSG_SYNC_GOOGLE_DOMAIN,
                   'max_threads': messages.MSG_SYNC_GOOGLE_MAX_THREADS,
                   'google_operations': messages.MSG_SYNC_GOOGLE_ALLOWED,
-                  'quota': sync_ldap_messages.MSG_SYNC_GOOGLE_QUOTA,
-                  'endpoint': sync_ldap_messages.MSG_SYNC_GOOGLE_ENDPOINT,
-                  'authurl': sync_ldap_messages.MSG_SYNC_GOOGLE_AUTH_URL
+                  'endpoint': messages.MSG_SYNC_GOOGLE_ENDPOINT,
+                  'authurl': messages.MSG_SYNC_GOOGLE_AUTH_URL
                   }
 
   def __init__(self, users, config, **moreargs):
@@ -159,7 +155,6 @@ class SyncGoogle(utils.Configurable):
     self.__admin = None
     self.__password = None
     self.__domain = None
-    self.quota = None
     self.__endpoint = None
     self.__authurl = None
     self.__max_threads = 10

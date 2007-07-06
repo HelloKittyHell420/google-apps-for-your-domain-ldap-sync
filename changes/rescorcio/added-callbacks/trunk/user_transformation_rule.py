@@ -79,7 +79,11 @@ class UserTransformationRule(object):
     Returns
       True if the prereqs are met
     """
-    return 'displayName' in ldap
+    try:
+      self.Mapping(ldap)
+    except KeyError, e:
+      return False
+    return True
 
   def GoogleUsername(self, ldap):
     """ Callback for GoogleUsername.
@@ -133,6 +137,17 @@ class UserTransformationRule(object):
     """
     return None
 
+  def GoogleQuota(self, ldap):
+    """ Callback for GoogleQuota.
+
+    Args:
+      ldap - a dict containing attribute, value pairs from ldap
+
+    Returns
+      The value to set GoogleQuota to
+    """
+    return '15360' # 15G quota!
+
   def _TransformAttr(self, callback_name, attrs):
     """ Return the value returned by the callback function when passed attrs.
 
@@ -174,5 +189,6 @@ class UserTransformationRule(object):
 
   def __init__(self):
     self.google_attributes = ['GoogleUsername', 'GoogleFirstName',
-                              'GoogleLastName', 'GooglePassword']
+                              'GoogleLastName', 'GooglePassword', 
+                              'GoogleQuota']
 

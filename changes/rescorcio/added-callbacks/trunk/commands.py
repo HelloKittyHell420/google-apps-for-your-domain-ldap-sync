@@ -30,15 +30,13 @@ class Commands: main class, subclass of the Python cmd.Cmd class
 
 import cmd
 import logging
+import messages
 import os
+from google.appsforyourdomain import provisioning
 import pprint
 import time
-
 import userdb
-
 import utils
-import provisioning
-import messages
 
 pp = pprint.PrettyPrinter(indent=2)
 
@@ -1122,7 +1120,7 @@ class Commands(cmd.Cmd):
     """
     attrs = self.users.LookupDN(dn)
     for gattr in ['GoogleFirstName', 'GoogleLastName', 'GoogleUsername',
-                  'GooglePassword']:
+                  'GooglePassword', 'GoogleQuota']:
       if gattr not in attrs:
         logging.error(messages.msg(messages.ERR_NO_ATTR_FOR_USER, gattr))
         return

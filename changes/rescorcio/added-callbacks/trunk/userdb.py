@@ -1,6 +1,6 @@
 #!/usr/bin/python2.4
 #
-# Copyright 2006 Google, Inc.
+# Copyright 2006, 2007 Google, Inc.
 # All Rights Reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License")
@@ -30,6 +30,7 @@ Methods not tied to a UserDB instance:
   SuggestGoogleLastName
   SuggestGoogleFirstName
   SuggestGooglePassword
+  SuggestGoogleQuota
   SuggestTimestamp
 
 class UserDB: the main class
@@ -38,6 +39,7 @@ class UserDB: the main class
 import codecs
 import csv
 import logging
+import messages
 import os
 import random
 import re
@@ -45,14 +47,11 @@ import threading
 import time
 import traceback
 import types
+import utils
+import user_transformation_rule
 import xml.dom
 import xml.dom.minidom
 from xml.sax._exceptions import *
-
-import messages
-import utils
-
-import user_transformation_rule
 
 
 def GetText(node_list):
@@ -109,6 +108,19 @@ def SuggestGoogleLastName(dictLower):
   attrs = dictLower.values()
   if "sn" in attrs:
     return "sn"
+
+def SuggestGoogleQuota(dictLower):
+
+  """ Suggest an expression to serve as the GoogleQuota.
+
+  Args:
+    dictLower : dictionary mapping lower-case versions of 
+      the attrs to the real attr names
+  Return: attribute name or None if none looked suitable
+  """
+  attrs = dictLower.values()
+  if "mailQuota" in attrs:
+    return "mailQuota"
 
 def SuggestGoogleFirstName(dictLower):
 
@@ -247,13 +259,14 @@ class UserDB(utils.Configurable):
   # all the Google variables which we can use to provision users:
   google_update_vals = frozenset(('GoogleFirstName','GoogleLastName',
                     'GooglePassword', 'GoogleUsername',
-                    'GoogleApplyIPWhitelist'))
+                    'GoogleApplyIPWhitelist', 'GoogleQuota'))
 
   # map of google_update_vals to the variables returned by
   # provisioning.RetrieveAccount():
   google_val_map = {'GoogleFirstName' : 'firstName',
                     'GoogleLastName' : 'lastName',
-                    'GoogleUsername' : 'userName'}
+                    'GoogleUsername' : 'userName',
+                    'GoogleQuota' : 'quota'}
 
   def __init__(self, config, users=None, **moreargs):
     """ Constructor
@@ -269,9 +282,10 @@ class UserDB(utils.Configurable):
     self.primary_key = None
 
     # 'mapping' is the relationship of LDAP attributes to Google-required
+    # TODO(rescorcio) change this to key off of google_val_map
     self.mapping = {'GoogleFirstName': None, 'GoogleLastName': None,
                     'GooglePassword': None, 'GoogleUsername': None,
-                    'GoogleApplyIPWhitelist': False}
+                    'GoogleApplyIPWhitelist': False, 'GoogleQuota': None}
 
     super(UserDB, self).__init__(config=config,
                                  config_parms=self.config_parms,
@@ -1207,6 +1221,7 @@ class UserDB(utils.Configurable):
         dictLower[attrLower] = attr
     mapping = self.mapping.copy()
 
+    # TODO(rescorcio) change this to key off the attribute list somehow
     if not mapping["GoogleUsername"]:
       mapping["GoogleUsername"] = SuggestGoogleUsername(dictLower)
     if not mapping["GoogleLastName"]:
@@ -1215,4 +1230,7 @@ class UserDB(utils.Configurable):
       mapping["GoogleFirstName"] = SuggestGoogleFirstName(dictLower)
     if not mapping["GooglePassword"]:
       mapping["GooglePassword"] = SuggestGooglePassword(dictLower)
+    if not mapping["GoogleQuota"]:
+      mapping["GoogleQuota"] = SuggestGoogleQuota(dictLower)
+
     return (trial, mapping)

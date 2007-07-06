@@ -560,3 +560,26 @@ HELP_BATCH = "Executes commands from a text file"
 MSG_STOPPING = "Stopping"
 
 HELP_STOP = "Exits"
+
+
+MSG_WRITE_CONFIG_FILE = "Writing config file to %s"
+
+MSG_SYNC_GOOGLE_ENDPOINT = ("The Google Apps host to target.   This is almost "
+                            "always unset unless you are a google developer "
+                            "working in the google private network.")
+
+MSG_SYNC_GOOGLE_AUTH_URL = ("The Google Apps Client Auth URL to target. "
+                            "This is almost always unset unless you are a "
+                            "google developer working in the google private "
+                            "network.")
+
+MSG_SYNC_RESULTS = "Results of synchronization operation with Google:"
+MSG_ADD_RESULTS = "%s users added successfully. %s users could not be added."
+MSG_EXITED_RESULTS = ("%s users exited successfully. %s users could not be "
+                      "exited.")
+MSG_RENAME_RESULTS = ("%s users renamed successfully. %s users could not be "
+                      "renamed.")
+MSG_UPDATE_RESULTS = ("%s users updated successfully. %s users could not be "
+                      "updated.")
+MSG_CONSULT_LOG = "Consult log file for details."
+

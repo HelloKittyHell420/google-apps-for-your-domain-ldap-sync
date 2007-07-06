@@ -35,18 +35,16 @@ Key objects used by this module:
     logging for the Tool
 """
 
+import ldap_ctxt
 import logging
 from optparse import OptionParser
-import sys
-
 import messages
-import utils
-
-import ldap_ctxt
+import sys
+import commands
 import sync_google
 import userdb
-import commands
-import sync_ldap_messages
+import utils
+
 
 def SetupMain(options):
 
@@ -127,7 +125,7 @@ def DoMain(options, args):
   # if the files can't be written (e.g. on Windows it's open in another window)
   # we want to allow user to rectify the situation.
   if save_config and options.config_file:
-    logging.info(messages.msg(sync_ldap_messages.MSG_WRITE_CONFIG_FILE, 
+    logging.info(messages.msg(messages.MSG_WRITE_CONFIG_FILE, 
                               options.config_file))
     ldap_context.WriteConfig()
     user_database.WriteConfig()

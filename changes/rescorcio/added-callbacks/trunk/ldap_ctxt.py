@@ -24,15 +24,13 @@ class LdapContext:  class that encapsulates all LDAP info
 """
 
 
+import ConfigParser
 import ldap
 import logging
+import messages
 import time
 import userdb
-
-import messages
 import utils
-
-import ConfigParser
 
 SLEEP_TIME = 0.1
 TIMEOUT_SECS = 15

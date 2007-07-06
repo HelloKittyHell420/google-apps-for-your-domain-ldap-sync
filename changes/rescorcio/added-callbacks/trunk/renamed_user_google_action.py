@@ -24,8 +24,8 @@ needs to change.)
 
 import google_action
 import logging
-import provisioning
-import provisioning_errs
+from google.appsforyourdomain import provisioning
+from google.appsforyourdomain import provisioning_errs
 
 
 class RenamedUserGoogleAction(google_action.GoogleAction):

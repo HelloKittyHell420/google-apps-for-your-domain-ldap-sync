@@ -25,9 +25,8 @@
 import google_action
 import google_result_queue
 import logging
-
-import provisioning
-import provisioning_errs
+from google.appsforyourdomain import provisioning
+from google.appsforyourdomain import provisioning_errs
 
 
 class ExitedUserGoogleAction(google_action.GoogleAction):

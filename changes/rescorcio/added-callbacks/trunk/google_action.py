@@ -11,8 +11,8 @@
 """
 
 
-import provisioning
-import provisioning_errs
+from google.appsforyourdomain import provisioning
+from google.appsforyourdomain import provisioning_errs
 
 
 class GoogleAction(object):
