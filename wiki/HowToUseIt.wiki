@@ -219,7 +219,7 @@ Notes on the above commands:
 
 
 ==How it works==
-Command-line options
+===Command-line options===
 
 The tool uses the optparse package from Python 2.4, which is why it requires that version.  Here is the output when "--help" is passed in:
 
@@ -243,7 +243,7 @@ All the options really are "optional."  The tool can prompt for whatever it need
 
 The DATA_FILE need not be given, but if it is, the user database is populated from the file before the command interpreter starts.
 
-==LDAP details==
+===LDAP details===
 
 The tool does not assume that the LDAP server is ActiveDirectory, OpenLdap, or any other product, and thus it doesn't know a priori what attributes should be used to derive required Google attributes.  Furthermore, LDAP directories often have many attributes which are of no conceivable use for Dasher provisioning, and which can be large and not even ASCII text, e.g. JPEG images, Microsoft security descriptors, etc.  Since the Tool just uses a Python dictionary for its storage rather than something more scaleable, it's desirable to not maintain more data than absolutely necessary for Google provisioning.  For this reason, a fair number of commands are aimed at discovering and managing the set of attributes to be maintained by the tool, and "mapping" (explained below) LDAP attributes to Google attributes.   This was illustrated in the Standing Start example above.
 Although the admin can always use  some other tool to read in the XML or CSV file and assign Google attributes in a way that makes sense to him/her, the tool can also take mappings of one or more LDAP attributes to Google attributes.  This mapping is actually a general Python expression, as the GoogleUsername illustrates.  An example of this mapping is shown in the Standing Start section: 
@@ -293,7 +293,7 @@ As the example shows, the help for any command can be seen by typing `help <comm
 
 The command names should be considered provisional and subject to change!  I'm not going to claim that a whole lot of thought's gone into them, so far.
 
-==Configuration variables==
+===Configuration variables===
 In general, you set a configuration variable via the 'set' command, and configure it permanently via a standard Python Library "ConfigParser" file.  Here are all possible variables, only some of which are required for any given run of the Tool:
 
 admin
@@ -390,7 +390,7 @@ Reference for the 'logging' module:
 10: debug messages
 0: all messages
 
-==LDAP searching==
+===LDAP searching===
 _testFilter, attrList, updateUsers  commands_
 
 If you think of the ultimate result of a tool session, it's an NxM table.  There are N rows, each row being a user, and M columns, each column an LDAP attribute, meta-attribute (more on this below), or Google attribute (some piece of data that's going to be uploaded to Google).  As we said earlier, it's important as a practical matter to keep M under control, since LDAP directories can have a lot of attributes of no possible use in Google provisioning, and those attributes can be large.  Thinking of it that way, set ldap_user_filter is for controlling N, attrList is for viewing and controlling M, and testFilter does a little of both, and is optional.  updateUsers is the payoff from almost all the commands mentioned so far.
@@ -452,7 +452,7 @@ Technical details:  this is actually done with a Python 'eval' statement, making
 testFilter suggests a set of mappings, using some very simple heuristics.
 mapGoogleAttribute  <attr> <expression> derives  <attr> by running <expression> on each user record.  It first tests the expression on a small sample of the users, since it's quite likely the admin will get it wrong the first few times, and only if there are no errors in that test phase is the mapping actually accepted.
 
-==Picking up changes in LDAP==
+===Picking up changes in LDAP===
 _showLastUpdate, updateUsers  commands_
 
 When we want to pick up "changes" in LDAP since we last did an updateUsers, we have to answer the question "changes since when?"   There are a lot of possible ways to answer the "when" question, and we can and should debate that, but the provisional answer is "since you last did updateUsers."  So there is a meta-attribute "meta-last-updated" added to each user record giving the time that the updateUsers that brought in this user was issued.
@@ -464,7 +464,7 @@ After that, we want to find the users that are no longer active, so another quer
 If there is both a ldap_disabled_filter and a timestamp defined:  a query is done on users passing the disabled filter, and having a timestamp greater than the last time we did updateUsers.    Those users are considered exi
 Otherwise, a query is done on ldap_user_filter, and all old users no longer passing the query are considered exits.
 
-==Synchronizing with Google==
+===Synchronizing with Google===
 _summarizeUsers, markUsers, syncAllUsers, syncOneUser  commands_
 
 Each user has a meta-Google-action attribute, which is used by syncAllUsers, and as mentioned above, updateUsers tries to be smart about setting it appropriately.  Furthermore, the admin can always save the file and open it in some tool like Excel that makes it easy to search and edit en masse.  But for single user changes, markUsers can be used to change the meta-Google-action attribute.
@@ -498,7 +498,7 @@ exited: LockAccount()
 updated: UpdateAccount()
 renamed: RenameAccount()
 
-==syncOneUser  command==
+===syncOneUser  command===
 This is for the case of "a new user doesn't have his/her mail account yet, they're standing right there in my office, and we need to enable them now."  Or, "someone was just terminated, and we need them removed now."
 The working assumption here is that the user's record in LDAP should be assumed correct, so the task is to sync it with Google.  (If the LDAP record is not correct, that should be taken care of before executing this command.)
 syncOneUser is somewhat involved, since there are a lot of cases to consider.  In general, the command updates the user's record from LDAP, queries Google and displays the results it gets back, and then displays its conclusion as to what happened with this user (was he/she added, exited, etc.?)  The admin gets a chance to OK it before the result is executed.
@@ -600,14 +600,14 @@ treat user as having been: exited
 Proceed with that action (y/n) n
 }}}
 
-==Loading and unloading your data==
+===Loading and unloading your data===
 _readUsers, writeUsers  commands_
 
 User data can be saved in either of two popular forms:  XML and CSV. 
 readUsers <filename> , where <filename> must end in ".xml" or ".csv", loads the database from the named file, and writeUsers <filename> stores it to that file in the indicated format.
 Admins are more than welcome to edit the XML or CSV files with some other tool before running this tool again;  in fact, we encourage it, since we can't possibly anticipate and implement everything they'd ever want to do.
 
-==Miscellaneous commands==
+===Miscellaneous commands===
 _batch, stop  commands_
 
 You can batch up a set of frequently-used commands into a file and run that:
