@@ -135,7 +135,7 @@ class LogConfig(Configurable):
     """configure the logging system according to our settings
     """
     # logging.basicConfig(level=self.loglevel,
-    logging.basicConfig(level=self.loglevel,
+    logging.basicConfig(level=int(self.loglevel),
                         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                         datefmt='%m-%d %H:%M',
                         filename=self.logfile,

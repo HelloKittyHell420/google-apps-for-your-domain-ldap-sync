@@ -20,19 +20,19 @@ Apps for Your Domain.  This is the main module.
 
 Key objects used by this module:
 
-  config: object holding all configuration variables for the Tool. An instance of the
-utils.Config() class.
+  config: object holding all configuration variables for the Tool. An instance 
+    of the utils.Config() class.
 
   ldap_context: object holding runtime context for the LDAP server
 
-  user_database: an instance of the userdb.UserDB() class, holding all information
-about users.
+  user_database: an instance of the userdb.UserDB() class, holding all 
+    information about users.
 
-  google_context: an instance of the sync_google.SyncGoogle() class, which handles
-interaction with Google Apps for Your Domain.
+  google_context: an instance of the sync_google.SyncGoogle() class, which 
+    handles interaction with Google Apps for Your Domain.
 
   log_config: an instance of utils.LogConfig(), holding the configuration for
-logging for the Tool
+    logging for the Tool
 """
 
 import ldap_ctxt
@@ -90,7 +90,8 @@ def GetValidFileFromUser():
       f.close()
       return fname
     except IOError:
-      sys.stderr.write('%s\n' % messages.msg(messages.ERR_NOT_VALID_FILE_NAME, fname))
+      sys.stderr.write('%s\n' % 
+                       messages.msg(messages.ERR_NOT_VALID_FILE_NAME, fname))
       fname = None
 
 def DoMain(options, args):
@@ -101,7 +102,8 @@ def DoMain(options, args):
       optparse.OptionParser
     args: second return value from parser.parse_args()
   """
-  (config, ldap_context, user_database, google_context, log_config) = SetupMain(options)
+  (config, ldap_context, user_database, google_context, log_config) = \
+    SetupMain(options)
   cmd = commands.Commands(ldap_context, user_database, google_context, config)
   cmd.cmdloop()
 
@@ -114,7 +116,8 @@ def DoMain(options, args):
       options.config_file = GetValidFileFromUser()
       save_config = True
   else:
-    ans = raw_input(messages.msg(messages.MSG_Q_SAVE_CONFIG_2, options.config_file))
+    ans = raw_input(messages.msg(messages.MSG_Q_SAVE_CONFIG_2, 
+                    options.config_file))
     first = ans[:1].lower()
     if first == messages.CHAR_YES:
       save_config = True
@@ -122,7 +125,8 @@ def DoMain(options, args):
   # if the files can't be written (e.g. on Windows it's open in another window)
   # we want to allow user to rectify the situation.
   if save_config and options.config_file:
-    logging.info(messages.msg(messages.MSG_WRITE_CONFIG_FILE, options.config_file))
+    logging.info(messages.msg(messages.MSG_WRITE_CONFIG_FILE, 
+                              options.config_file))
     ldap_context.WriteConfig()
     user_database.WriteConfig()
     google_context.WriteConfig()

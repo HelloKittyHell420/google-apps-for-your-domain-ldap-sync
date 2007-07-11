@@ -62,10 +62,14 @@ class AddedUserGoogleAction(google_action.GoogleAction):
     try:
       logging.debug('about to CreateAccount for %s' % \
                     self.attrs['GoogleUsername'])
+      moreargs = {}
+      if 'GoogleQuota' in self.attrs:
+        moreargs['quota'] = self.attrs['GoogleQuota']
       self._api.CreateAccountWithEmail(self.attrs['GoogleFirstName'],
                               self.attrs['GoogleLastName'],
                               self.attrs['GooglePassword'],
-                              self.attrs['GoogleUsername'])
+                              self.attrs['GoogleUsername'],
+                              **moreargs)
       self._result_queue.PutResult(self.dn, 'added')
       self._thread_stats.IncrementStat('adds', 1)
     except provisioning_errs.ProvisioningApiError, e:
