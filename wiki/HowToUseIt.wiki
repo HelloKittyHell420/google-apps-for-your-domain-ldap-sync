@@ -391,7 +391,7 @@ Reference for the 'logging' module:
 0: all messages
 
 ==LDAP searching==
-testFilter, attrList, updateUsers  commands
+_testFilter, attrList, updateUsers  commands_
 
 If you think of the ultimate result of a tool session, it's an NxM table.  There are N rows, each row being a user, and M columns, each column an LDAP attribute, meta-attribute (more on this below), or Google attribute (some piece of data that's going to be uploaded to Google).  As we said earlier, it's important as a practical matter to keep M under control, since LDAP directories can have a lot of attributes of no possible use in Google provisioning, and those attributes can be large.  Thinking of it that way, set ldap_user_filter is for controlling N, attrList is for viewing and controlling M, and testFilter does a little of both, and is optional.  updateUsers is the payoff from almost all the commands mentioned so far.
 
@@ -406,7 +406,7 @@ If you think of the ultimate result of a tool session, it's an NxM table.  There
 `testFilter` is an attempt at "LDAP discovery" for first-time users.  Once you've used the tool and gotten your user filter and attribute set the way you want it, you wouldn't use this.  testFilter is intended to help you find out reasonably quickly which attributes are in your schema.  testFilter <filter> queries the LDAP server for objects matching the filter, and then it fetches all attributes for a small number of them to see what attributes are in use.  The inset above ("Retrieving all attributes on a small sample of these...  The set of attributes defined on these users") is output from the testFilter command.  If you don't accept the suggestions, you can always do attrList add/remove to put in or take out whatever attributes you want.
 
 ==Viewing the users==
-showUsers, summarizeUsers  commands
+_showUsers, summarizeUsers  commands_
 
 Probably no matter how many times we say "It's not a data exploration tool.  Save the file and open it in some other tool like Excel if you really want to look at your data," admins are going to complain about this one.  C'est la vie.  (Maybe we should take the command out altogether?)
 showUsers <start number> <end number> displays the users from <start> to <end>.  It's intended just to get some rough idea what the user data looks like.  Here's an example:
@@ -453,7 +453,7 @@ testFilter suggests a set of mappings, using some very simple heuristics.
 mapGoogleAttribute  <attr> <expression> derives  <attr> by running <expression> on each user record.  It first tests the expression on a small sample of the users, since it's quite likely the admin will get it wrong the first few times, and only if there are no errors in that test phase is the mapping actually accepted.
 
 ==Picking up changes in LDAP==
-showLastUpdate, updateUsers  commands
+_showLastUpdate, updateUsers  commands_
 
 When we want to pick up "changes" in LDAP since we last did an updateUsers, we have to answer the question "changes since when?"   There are a lot of possible ways to answer the "when" question, and we can and should debate that, but the provisional answer is "since you last did updateUsers."  So there is a meta-attribute "meta-last-updated" added to each user record giving the time that the updateUsers that brought in this user was issued.
 showLastUpdate displays the highest value of meta-last-updated.
@@ -465,7 +465,7 @@ If there is both a ldap_disabled_filter and a timestamp defined:  a query is don
 Otherwise, a query is done on ldap_user_filter, and all old users no longer passing the query are considered exits.
 
 ==Synchronizing with Google==
-summarizeUsers, markUsers, syncAllUsers, syncOneUser  commands
+_summarizeUsers, markUsers, syncAllUsers, syncOneUser  commands_
 
 Each user has a meta-Google-action attribute, which is used by syncAllUsers, and as mentioned above, updateUsers tries to be smart about setting it appropriately.  Furthermore, the admin can always save the file and open it in some tool like Excel that makes it easy to search and edit en masse.  But for single user changes, markUsers can be used to change the meta-Google-action attribute.
 
@@ -601,14 +601,14 @@ Proceed with that action (y/n) n
 }}}
 
 ==Loading and unloading your data==
-readUsers, writeUsers  commands
+_readUsers, writeUsers  commands_
 
 User data can be saved in either of two popular forms:  XML and CSV. 
 readUsers <filename> , where <filename> must end in ".xml" or ".csv", loads the database from the named file, and writeUsers <filename> stores it to that file in the indicated format.
 Admins are more than welcome to edit the XML or CSV files with some other tool before running this tool again;  in fact, we encourage it, since we can't possibly anticipate and implement everything they'd ever want to do.
 
 ==Miscellaneous commands==
-batch, stop  commands
+_batch, stop  commands_
 
 You can batch up a set of frequently-used commands into a file and run that:
 batch <filename> reads each line from <filename> and runs it just as though you'd typed it.  Here's an example of using that to automate connecting to the Google LDAP server:
