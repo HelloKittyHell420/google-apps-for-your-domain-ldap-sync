@@ -324,8 +324,6 @@ max_threads)
     """
     if not attr in self.config_parms:
       return messages.msg(messages.ERR_NO_SUCH_ATTR, attr)
-    #if attr == 'google_operations':
-    #  return messages.ERR_NO_SET_OPERATIONS
     try:
       if attr == 'max_threads':
         try:
