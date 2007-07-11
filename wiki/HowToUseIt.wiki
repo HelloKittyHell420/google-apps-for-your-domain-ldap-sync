@@ -32,11 +32,11 @@ In a steady state, the admin has previously mined the LDAP directory, added all 
 The commands are shown in bold.
 
 {{{
-$ ./sync_ldap.py -c mydomain.com.cfg -f mydomain.com_users.csv
+$ ./sync_ldap.py -c yourdomain.com.cfg -f yourdomain.com_users.csv
 Copyright 2006, Google, Inc.
 All Rights Reserved.
 Command: connect
-Connected to LDAP://ldap.mydomain.com
+Connected to LDAP://yourldapserver.yourdomain.com
 Command: updateUsers
 Add users that match your user filter of
 (objectclass=organizationalPerson)
@@ -61,8 +61,8 @@ Apps for Your Domain.
 Here you need to set several variables to indicate how to login administratively to dasher
 
 {{{
-     set admin domain-admin@mydomain.com
-     set domain mydomain.com
+     set admin domain-admin@yourdomain.com
+     set domain yourdomain.com
      set quota 15360
      set password secret
 }}}
@@ -109,12 +109,12 @@ There were two files used as input in the last example, corp.cfg (the configurat
 $ sync_ldap.py
 Copyright 2006, Google, Inc.
 All Rights Reserved.
-Command: set ldap_url LDAP://yourldapserver.mydomain.com
-Command: set ldap_base_dn dc=mydomain,dc=com
+Command: set ldap_url LDAP://yourldapserver.yourdomain.com
+Command: set ldap_base_dn dc=yourdomain,dc=com
 Command: set ldap_user_filter (objectclass=organizationalPerson)
 Command: connect
-05-16 12:58 root         INFO     Connected to LDAP://ldap.mydomain.com
-Connected to LDAP://ldap.mydomain.com
+05-16 12:58 root         INFO     Connected to LDAP://yourldapserver.yourdomain.com
+Connected to LDAP://yourldapserver.yourdomain.com
 Command: set ldap_timeout 180                         <== This is needed for large queries like the one above
 Command: testFilter
 Search found 706 users
@@ -209,7 +209,7 @@ You did not supply a config file on the command line
 A config file will capture all your LDAP and user settings so that you don't
 need to run commands next time to set them. Do you want to save your
 configuration in a file (y/n) y
-Enter a file name: mydomain.cfg
+Enter a file name: yourdomain.cfg
 }}}
 
 Notes on the above commands:
@@ -328,12 +328,12 @@ loglevel = 11
 logfile = '/bob/log.txt'
 timestamp = 'modifyTimestamp'
 mapping = {'GoogleUsername': "mail[:mail.find('@')]", 'GoogleFirstName': 'givenName', 'GoogleLastName': 'sn', 'GooglePassword': None, 'GoogleApplyIPWhitelist': False}
-ldap_host = 'ldap.mydomain.com'
+ldap_host = 'yourldapserver.yourdomain.com'
 attrs = set(['cn', 'meta-last-updated', 'uidNumber', 'GoogleFirstName', 'gidNumber',  'GoogleApplyIPWhitelist', 'meta-Google-action', 'uid', 'GoogleUsername', 'displayName', 'modifyTimestamp', 'sn', 'mail', 'GoogleLastName', 'givenName', 'GooglePassword'])
 ldap_disabled_filter = '(objectclass=organizationalPerson)'
 ldap_user_filter = '(objectclass=organizationalPerson)'
 ldap_timeout = 180.0
-ldap_root_dn = 'dc=mydomain,dc=com'
+ldap_root_dn = 'dc=yourdomain,dc=com'
 }}}
 
 The astute observer will recognize that, especially for 'attrs' and 'mapping', this is just the output of a Python 'repr' command.  In fact all these parameter values are gotten that way, and the strings are 'eval' -ed on the way in to recover the values.  This is tolerable for simple numbers and strings, but probably not for the more complex syntaxes, unless the admin is very fluent with Python.  For this reason, it's disallowed to set 'attrs' and 'mapping' via the 'set' command, and you have to use commands that are tailored specifically for those variables ('attrList' and 'mapGoogleAttribute' respectively).
@@ -422,7 +422,7 @@ Display new users 1 to 1
   'GoogleUsername': 'fred299',
   'cn': 'Fred299 Flinstone',
   'gidNumber': '800',
-  'mail': 'fred299@mydomain.com',
+  'mail': 'fred299@yourdomain.com',
   'meta-Google-action': 'add',
   'meta-Google-status': '',
   'meta-last-updated': '1159480585.93',
@@ -523,7 +523,7 @@ User's LDAP record has been changed (new first name):
 
 {{{
 Command: syncOneUser name=Anew User
-The user record for cn=anew user,ou=unittest,dc=mydomain,dc=com is now:
+The user record for cn=anew user,ou=unittest,dc=yourdomain,dc=com is now:
 { 'GoogleApplyIPWhitelist': None,
   'GoogleFirstName': 'Anewer',
   'GoogleLastName': 'google',
@@ -534,15 +534,15 @@ The user record for cn=anew user,ou=unittest,dc=mydomain,dc=com is now:
   'badPwdCount': '0',
   'cn': 'Anew User',
   'displayName': 'Anew User',
-  'distinguishedName': 'CN=Anew User,OU=Unittest,DC=mydomain,DC=com',
+  'distinguishedName': 'CN=Anew User,OU=Unittest,DC=yourdomain,DC=com',
   'givenName': 'Anewer',
-  'mail': 'anewuser@mydomain.com',
+  'mail': 'anewuser@yourdomain.com',
   'mailNickname': 'anewuser',
   'meta-Google-action': 'updated',
   'meta-last-updated': 1164846094.3949389,
   'name': 'Anew User',
   'sn': 'Formeruser',
-  'userPrincipalName': 'anewuser@mydomain.com',
+  'userPrincipalName': 'anewuser@yourdomain.com',
   'whenChanged': '20061130002558.0Z'}
 Now looking up 'anewuser' in Google Apps for Your Domain...
 Google Apps for Your Domain returned the following data:
@@ -565,7 +565,7 @@ Command: syncOneUser name=Anew User
 Search in LDAP found 0 users
 There are 1 users in the user database that match
 your query.
-The user record for cn=anew user,ou=unittest,dc=mydomain,dc=com is now:
+The user record for cn=anew user,ou=unittest,dc=yourdomain,dc=com is now:
 { 'GoogleApplyIPWhitelist': None,
   'GoogleFirstName': 'Anewer',
   'GoogleLastName': 'google',
@@ -576,15 +576,15 @@ The user record for cn=anew user,ou=unittest,dc=mydomain,dc=com is now:
   'badPwdCount': '0',
   'cn': 'Anew User',
   'displayName': 'Anew User',
-  'distinguishedName': 'CN=Anew User,OU=Unittest,DC=mydomain,DC=com',
+  'distinguishedName': 'CN=Anew User,OU=Unittest,DC=yourdomain,DC=com',
   'givenName': 'Anewer',
-  'mail': 'anewuser@mydomain.com',
+  'mail': 'anewuser@yourdomain.com',
   'mailNickname': 'anewuser',
   'meta-Google-action': 'exited',
   'meta-last-updated': 1164846561.784775,
   'name': 'Anew User',
   'sn': 'Formeruser',
-  'userPrincipalName': 'anewuser@mydomain.com',
+  'userPrincipalName': 'anewuser@yourdomain.com',
   'whenChanged': '20061130002558.0Z'}
 Now looking up 'anewuser' in Google Apps for Your Domain...
 Google Apps for Your Domain returned the following data:
@@ -614,8 +614,8 @@ You can batch up a set of frequently-used commands into a file and run that:
 batch <filename> reads each line from <filename> and runs it just as though you'd typed it.  Here's an example of using that to automate connecting to the Google LDAP server:
 
 {{{
-setHost yourldapserver.mydomain.com
-setRootDN dc=mydomain,dc=com
+setHost yourldapserver.yourdomain.com
+setRootDN dc=yourdomain,dc=com
 connect
 setFilter (objectclass=inetOrgPerson)
 }}}
