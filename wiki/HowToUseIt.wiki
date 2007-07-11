@@ -36,7 +36,7 @@ $ ./sync_ldap.py -c mydomain.com.cfg -f mydomain.com_users.csv
 Copyright 2006, Google, Inc.
 All Rights Reserved.
 Command: connect
-Connected to LDAP://ldap.corp.google.com
+Connected to LDAP://ldap.mydomain.com
 Command: updateUsers
 Add users that match your user filter of
 (objectclass=organizationalPerson)
@@ -113,8 +113,8 @@ Command: set ldap_url LDAP://yourldapserver.mydomain.com
 Command: set ldap_base_dn dc=mydomain,dc=com
 Command: set ldap_user_filter (objectclass=organizationalPerson)
 Command: connect
-05-16 12:58 root         INFO     Connected to LDAP://ldap.corp.google.com
-Connected to LDAP://ldap.corp.google.com
+05-16 12:58 root         INFO     Connected to LDAP://ldap.mydomain.com
+Connected to LDAP://ldap.mydomain.com
 Command: set ldap_timeout 180                         <== This is needed for large queries like the one above
 Command: testFilter
 Search found 706 users
