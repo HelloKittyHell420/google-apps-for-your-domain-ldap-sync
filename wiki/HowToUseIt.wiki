@@ -28,7 +28,7 @@ It reads and writes its state to a CSV or XML file.  The overall workflow is:
 ==Sample workflows==
 To motivate the rest of this doc, here are two examples of how an admin might use the Tool:
 Steady state
-In a steady state, the admin has previously mined the LDAP directory, added all the employees to GAFYD, and saved the users to a file 'yourdomain.users.csv'.  He/she has also saved a configuration file 'corp.cfg'.  This workflow represents what would be done every day/week/whatever to sync up the LDAP directory with Google.
+In a steady state, the admin has previously mined the LDAP directory, added all the employees to GAFYD, and saved the users to a file 'yourdomain.users.csv'.  He/she has also saved a configuration file 'yourdomain.com.cfg'.  This workflow represents what would be done every day/week/whatever to sync up the LDAP directory with Google.
 The commands are shown in bold.
 
 {{{
@@ -103,7 +103,7 @@ which indicates you are attempting to use a quota different than the acceptable 
 
 
 Standing start
-There were two files used as input in the last example, corp.cfg (the configuration) and yourdomain.users.csv (the actual employee data).  This is how we could have gotten them:
+There were two files used as input in the last example, yourdomain.com.cfg (the configuration) and yourdomain.users.csv (the actual employee data).  This is how we could have gotten them:
 
 {{{
 $ sync_ldap.py
