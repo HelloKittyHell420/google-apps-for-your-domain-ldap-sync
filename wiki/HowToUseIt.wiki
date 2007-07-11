@@ -394,13 +394,16 @@ Reference for the 'logging' module:
 testFilter, attrList, updateUsers  commands
 
 If you think of the ultimate result of a tool session, it's an NxM table.  There are N rows, each row being a user, and M columns, each column an LDAP attribute, meta-attribute (more on this below), or Google attribute (some piece of data that's going to be uploaded to Google).  As we said earlier, it's important as a practical matter to keep M under control, since LDAP directories can have a lot of attributes of no possible use in Google provisioning, and those attributes can be large.  Thinking of it that way, set ldap_user_filter is for controlling N, attrList is for viewing and controlling M, and testFilter does a little of both, and is optional.  updateUsers is the payoff from almost all the commands mentioned so far.
-set ldap_user_filter just sets the LDAP filter that is used in updateUsers, and has the same syntax as a filter for the ldapsearch utility.  An example for Google might be "(objectClass=googleOrgPerson)"
-attrList show displays the attributes that will be saved on the next updateUsers call.
-attrList add adds an additional LDAP attribute.
-attrList remove removes an attribute.  This actually goes through the Python dictionary and removes existing attributes of that name.
-testFilter is my attempt at "LDAP discovery" for first-time users.  Once you've used the tool and gotten your user filter and attribute set the way you want it, you wouldn't use this, but we have to remember that not everyone has our LDAP schema, or even any standard schema, and thus we don't know what attributes will be useful in Google provisioning and how to use them.  So testFilter is intended to help you find that out reasonably quickly.
-testFilter <filter> queries the LDAP server for objects matching the filter, and then it fetches all attributes for a small number of them to see what attributes are in use.  The inset above ("Retrieving all attributes on a small sample of these...
-The set of attributes defined on these users") is output from the testFilter command.  If you don't accept the suggestions, you can always do attrList add/remove to put in or take out whatever attributes you want.
+
+`set ldap_user_filter` just sets the LDAP filter that is used in updateUsers, and has the same syntax as a filter for the ldapsearch utility.  An example for Google might be "(objectClass=googleOrgPerson)"
+
+`attrList show` displays the attributes that will be saved on the next updateUsers call.
+
+`attrList add` adds an additional LDAP attribute.
+
+`attrList remove` removes an attribute.  This actually goes through the Python dictionary and removes existing attributes of that name.
+
+`testFilter` is an attempt at "LDAP discovery" for first-time users.  Once you've used the tool and gotten your user filter and attribute set the way you want it, you wouldn't use this.  testFilter is intended to help you find out reasonably quickly which attributes are in your schema.  testFilter <filter> queries the LDAP server for objects matching the filter, and then it fetches all attributes for a small number of them to see what attributes are in use.  The inset above ("Retrieving all attributes on a small sample of these...  The set of attributes defined on these users") is output from the testFilter command.  If you don't accept the suggestions, you can always do attrList add/remove to put in or take out whatever attributes you want.
 
 ==Viewing the users==
 showUsers, summarizeUsers  commands
@@ -623,4 +626,3 @@ stop exits the command interpreter. (as does control-D on Linux and control-Z on
 
     * Need to retrofit to support Provisioning API v2 once the Python client wrappers are written.  Java wrappers are already in place.
     * Need to integrate Google Groups, mailman list and ldap groups sync into this
-
