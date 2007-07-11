@@ -296,6 +296,7 @@ The command names should be considered provisional and subject to change!  I'm n
 ===Configuration variables===
 In general, you set a configuration variable via the 'set' command, and configure it permanently via a standard Python Library "ConfigParser" file.  Here are all possible variables, only some of which are required for any given run of the Tool:
 
+{{{
 admin
 attrs
 domain
@@ -314,6 +315,7 @@ max_threads
 password
 primary_key
 timestamp
+}}}
 
 (the naming could be tweaked a little.  In particular, I intend to change 'admin' to 'google_admin' and similarly for 'domain', 'password', and 'max_threads', since those only apply to talking to Google Apps for Your Domain.)
 
@@ -337,7 +339,8 @@ ldap_root_dn = 'dc=yourdomain,dc=com'
 }}}
 
 The astute observer will recognize that, especially for 'attrs' and 'mapping', this is just the output of a Python 'repr' command.  In fact all these parameter values are gotten that way, and the strings are 'eval' -ed on the way in to recover the values.  This is tolerable for simple numbers and strings, but probably not for the more complex syntaxes, unless the admin is very fluent with Python.  For this reason, it's disallowed to set 'attrs' and 'mapping' via the 'set' command, and you have to use commands that are tailored specifically for those variables ('attrList' and 'mapGoogleAttribute' respectively).
-LDAP config variables
+
+===LDAP config variables===
 These are, hopefully, pretty well explained just by their names:
 
   * LDAP hostname or IP address (ldap_host)
@@ -365,9 +368,7 @@ Some of these could equally well be considered "LDAP variables", I suppose, but 
   * attrs: the set of user attributes to be fetched from LDAP and written to the CSV or XML file. 
   * mapping:  the mapping from LDAP attributes to the GAFYD variables that are ultimately pushed to Google. 
   * primary_key:  (optional)  If supplied, this is the LDAP attribute of a user that never changes, even if the employee gets married, divorced, and changes every possible other attribute including "distinguishedName".  An example would be the "uid" or "employeeNumber" attribute.  The primary_key is helpful in finding users whose GoogleUsername must change;  without it, they may be incorrectly treated as an exit and a new hire.
-  * timestamp: the LDAP attribute which is used on your system to record when a record was last changed.  This is critical since it's the way the Tool does the "Steady State" operation shown above.  Note the line "(&(objectclass=organizationalPerson)(modifyTimestamp>=20061101185255.0Z))"   
-
-      "modifyTimestamp" is the timestamp variable here.
+  * timestamp: the LDAP attribute which is used on your system to record when a record was last changed.  This is critical since it's the way the Tool does the "Steady State" operation shown above.  Note the line "(&(objectclass=organizationalPerson)(modifyTimestamp>=20061101185255.0Z))" "modifyTimestamp" is the timestamp variable here.
 
 Also you may want to restrict the types of operations allowed by the sync.  Specifically the google_operations variable setting below will restrict changes to updates only.
 
@@ -383,12 +384,14 @@ Miscellaneous config variables
 
 Reference for the 'logging' module:
 
+{{{
 50: critial errors only
 40: errors
 30: warnings
 20: info messages
 10: debug messages
 0: all messages
+}}}
 
 ===LDAP searching===
 _testFilter, attrList, updateUsers  commands_
@@ -409,7 +412,8 @@ If you think of the ultimate result of a tool session, it's an NxM table.  There
 _showUsers, summarizeUsers  commands_
 
 Probably no matter how many times we say "It's not a data exploration tool.  Save the file and open it in some other tool like Excel if you really want to look at your data," admins are going to complain about this one.  C'est la vie.  (Maybe we should take the command out altogether?)
-showUsers <start number> <end number> displays the users from <start> to <end>.  It's intended just to get some rough idea what the user data looks like.  Here's an example:
+
+`showUsers <start number> <end number>` displays the users from <start> to <end>.  It's intended just to get some rough idea what the user data looks like.  Here's an example:
 
 {{{
 Command: showUsers 1
@@ -448,9 +452,11 @@ testFilter, mapGoogleAttribute commands
 }}}
 
 Although probably for most installations, the 'sn' attribute can be mapped directly to GoogleLastName and 'givenName' can be mapped to GoogleFirstName, we can't assume anything, and getting the customer's desired GoogleUsername is even dicier.  But we want this tool to be useful, so there's a way that, when a user is added, his or her Google attributes can be derived from the LDAP attributes, and this derivation can be any legal Python expression, e.g. the "mail[:mail.find('@')]" example above, which takes "fred@acme.com" and produces "fred."
+
 Technical details:  this is actually done with a Python 'eval' statement, making the global namespace the set of attributes for that user.  So your expression can pull in any other data about the user, but nothing else.
 testFilter suggests a set of mappings, using some very simple heuristics.
-mapGoogleAttribute  <attr> <expression> derives  <attr> by running <expression> on each user record.  It first tests the expression on a small sample of the users, since it's quite likely the admin will get it wrong the first few times, and only if there are no errors in that test phase is the mapping actually accepted.
+
+`mapGoogleAttribute  <attr> <expression>` derives  <attr> by running <expression> on each user record.  It first tests the expression on a small sample of the users, since it's quite likely the admin will get it wrong the first few times, and only if there are no errors in that test phase is the mapping actually accepted.
 
 ===Picking up changes in LDAP===
 _showLastUpdate, updateUsers  commands_
@@ -480,7 +486,7 @@ Marked for update: 0
 Marked for rename: 0
 }}}
 
-syncAllUsers is the ultimate goal of the tool.  It uses the Provisioning API (Python bindings for which were recently checked into ccc/hosted/provisioning/clients/python/google/appsforyourdomain) to actually go to Google and add, delete, update and rename the users according to their meta-Google-action attribute.  Once the meta-Google-action has been successfully carried out on the user, the meta-Google-action attribute is set to null.
+syncAllUsers is the ultimate goal of the tool.  It uses the Provisioning API to actually go to Google and add, delete, update and rename the users according to their meta-Google-action attribute.  Once the meta-Google-action has been successfully carried out on the user, the meta-Google-action attribute is set to null.
 
 syncAllUsers works as follows (the same logic is followed in turn for adds, exits, updates, and renames):
 
