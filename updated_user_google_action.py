@@ -59,10 +59,14 @@ class UpdatedUserGoogleAction(google_action.GoogleAction):
     """
     self.dn = dn
     self.attrs = attrs
+    mapping_for_updates = {'firstName': 'GoogleFirstName', 
+                           'lastName': 'GoogleLastName',
+                           'password': 'GooglePassword'}
+    fields = {}
+    for (key, google_key) in mapping_for_updates.iteritems():
+      if google_key in attrs and attrs[google_key]:
+        fields[key] = attrs[google_key]
     try:
-      fields = {'firstName' : attrs['GoogleFirstName'],
-              'lastName' : attrs['GoogleLastName'],
-              'password' : attrs['GooglePassword'] }
       logging.debug('about to UpdateAccount for %s' % \
                     self.attrs['GoogleUsername'])
       self._api.UpdateAccount(self.attrs['GoogleUsername'], fields)

@@ -2,6 +2,19 @@
 #
 # Copyright 2006, 2007 Google, Inc.
 # All Rights Reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License")
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
 """ Contains the UserDB, or user database.  The heart of the Sync Tool.
 
@@ -17,6 +30,7 @@ Methods not tied to a UserDB instance:
   SuggestGoogleLastName
   SuggestGoogleFirstName
   SuggestGooglePassword
+  SuggestGoogleQuota
   SuggestTimestamp
 
 class UserDB: the main class
@@ -34,6 +48,7 @@ import time
 import traceback
 import types
 import utils
+import user_transformation_rule
 import xml.dom
 import xml.dom.minidom
 from xml.sax._exceptions import *
@@ -94,6 +109,19 @@ def SuggestGoogleLastName(dictLower):
   if "sn" in attrs:
     return "sn"
 
+def SuggestGoogleQuota(dictLower):
+
+  """ Suggest an expression to serve as the GoogleQuota.
+
+  Args:
+    dictLower : dictionary mapping lower-case versions of 
+      the attrs to the real attr names
+  Return: attribute name or None if none looked suitable
+  """
+  attrs = dictLower.values()
+  if "mailQuota" in attrs:
+    return "mailQuota"
+
 def SuggestGoogleFirstName(dictLower):
 
   """ Suggest an expression to serve as the GoogleFirstName
@@ -152,6 +180,8 @@ def AttrListCompare(attrList, first, second):
   """
   for attr in attrList:
     if attr not in first or attr not in second:
+      if attr == 'GooglePassword':  # this happens if attr removed by user
+        continue
       raise RuntimeError('attr %s not present' % attr)
     val_first = first[attr]
     val_second = second[attr]
@@ -187,8 +217,8 @@ class UserDB(utils.Configurable):
   significantly changes the operation of AnalyzeChangedUsers().
 
   UserDB has one thread-safe method for changing the 'meta-Google-*' attributes.
-  This is intended for the sync_google module, since it can spawn multiple threads
-  for talking to Google.
+  This is intended for the sync_google module, since it can spawn multiple 
+  threads for talking to Google.
 
   ********************  Code documentation ********************************
   UserDB is the heart of the Sync Tool, with all the application
@@ -229,13 +259,14 @@ class UserDB(utils.Configurable):
   # all the Google variables which we can use to provision users:
   google_update_vals = frozenset(('GoogleFirstName','GoogleLastName',
                     'GooglePassword', 'GoogleUsername',
-                    'GoogleApplyIPWhitelist'))
+                    'GoogleApplyIPWhitelist', 'GoogleQuota'))
 
   # map of google_update_vals to the variables returned by
   # provisioning.RetrieveAccount():
   google_val_map = {'GoogleFirstName' : 'firstName',
                     'GoogleLastName' : 'lastName',
-                    'GoogleUsername' : 'userName'}
+                    'GoogleUsername' : 'userName',
+                    'GoogleQuota' : 'quota'}
 
   def __init__(self, config, users=None, **moreargs):
     """ Constructor
@@ -251,9 +282,10 @@ class UserDB(utils.Configurable):
     self.primary_key = None
 
     # 'mapping' is the relationship of LDAP attributes to Google-required
+    # TODO(rescorcio) change this to key off of google_val_map
     self.mapping = {'GoogleFirstName': None, 'GoogleLastName': None,
                     'GooglePassword': None, 'GoogleUsername': None,
-                    'GoogleApplyIPWhitelist': False}
+                    'GoogleApplyIPWhitelist': False, 'GoogleQuota': None}
 
     super(UserDB, self).__init__(config=config,
                                  config_parms=self.config_parms,
@@ -627,7 +659,8 @@ class UserDB(utils.Configurable):
       else: # an existing DN
         logging.debug('existing dn: %s' % dn)
         if attrs['GoogleUsername'] != self.db[dn]['GoogleUsername']:
-          self.db[dn]['meta-Google-old-username'] = self.db[dn]['GoogleUsername']
+          meta_attr = 'meta-Google-old-username'
+          self.db[dn][meta_attr] = self.db[dn]['GoogleUsername']
           renames.append(dn)
         elif self._GoogleAttrsCompare(dn, attrs):
           mods.append(dn)
@@ -652,7 +685,8 @@ class UserDB(utils.Configurable):
           else:
             return None
         else:
-          self.db[dn]['meta-Google-old-username'] = self.db[dn]['GoogleUsername']
+          meta_attr = 'meta-Google-old-username'
+          self.db[dn][meta_attr] = self.db[dn]['GoogleUsername']
           return 'renamed'
       else:
         return 'added'
@@ -707,9 +741,9 @@ class UserDB(utils.Configurable):
 
 
   """
-  *******************************************************************************
+  ******************************************************************************
    "mapping", or creating the Google attributes from the LDAP attributes
-  *******************************************************************************
+  ******************************************************************************
   """
   def GetGoogleMappings(self):
     """ return a dictionary of the "Google attributes" with their
@@ -757,11 +791,18 @@ class UserDB(utils.Configurable):
     if not dns:
       return
     count = max(int(len(dns) * fraction),10)
+    ldap_user_xform = user_transformation_rule.UserTransformationRule()
+    callbacks = ldap_user_xform.Callbacks()
     for i in xrange(count):
       dn = dns[random.randrange(len(dns))]
       attrs = self.db[dn]
+      copy_of_attrs = attrs.copy()
+
+      if mapping in callbacks:
+        callback_mapping = ldap_user_xform.Mapping(attrs)
+        copy_of_attrs.update(callback_mapping)
       try:
-        eval(mapping, attrs.copy())
+        eval(mapping, copy_of_attrs)
       except Exception,e:
         return str(e)
 
@@ -838,7 +879,9 @@ class UserDB(utils.Configurable):
     if enforceAttrList:
       for attr in row.keys():
         if attr not in self.attrs:
-          del row[attr]
+          if attr not in self.mapping.keys(): # should not delete the Google*
+                                              # attributes no matter what
+            del row[attr]
     self.db[dn] = row
     self._UpdateAttrList(row)
     if self.primary_key:
@@ -950,7 +993,8 @@ class UserDB(utils.Configurable):
     fieldnames = ["dn"]
     fieldnames = self._ExtendListIfNecessary(fieldnames, list(self.attrs))
     fieldnames = self._ExtendListIfNecessary(fieldnames, list(self.meta_attrs))
-    fieldnames = self._ExtendListIfNecessary(fieldnames, list(self.mapping.keys()))
+    fieldnames = self._ExtendListIfNecessary(fieldnames, 
+                                             list(self.mapping.keys()))
     fieldnames.sort()
     dw = csv.DictWriter(f, fieldnames, dialect="excel")
 
@@ -1082,11 +1126,17 @@ class UserDB(utils.Configurable):
     for (attr, value) in attrs.iteritems():
       result[attr] = value
 
+    ldap_user_xform = user_transformation_rule.UserTransformationRule()
+    if ldap_user_xform.MeetsPrereqs(attrs):
+      callback_mapping = ldap_user_xform.Mapping(attrs)
     # if there were a naming conflict, the Google attrs would trump:
     for (key, expr) in self.mapping.iteritems():
       if expr:
+        copy_of_attrs = attrs.copy()
+        if ldap_user_xform.MeetsPrereqs(attrs):
+          copy_of_attrs.update(callback_mapping)
         try:
-          result[key] = eval(expr, attrs.copy()).strip()
+          result[key] = eval(expr, copy_of_attrs).strip()
         except (NameError, SyntaxError):
           result[key] = None  # make sure it's got something
           pass
@@ -1171,6 +1221,7 @@ class UserDB(utils.Configurable):
         dictLower[attrLower] = attr
     mapping = self.mapping.copy()
 
+    # TODO(rescorcio) change this to key off the attribute list somehow
     if not mapping["GoogleUsername"]:
       mapping["GoogleUsername"] = SuggestGoogleUsername(dictLower)
     if not mapping["GoogleLastName"]:
@@ -1179,4 +1230,7 @@ class UserDB(utils.Configurable):
       mapping["GoogleFirstName"] = SuggestGoogleFirstName(dictLower)
     if not mapping["GooglePassword"]:
       mapping["GooglePassword"] = SuggestGooglePassword(dictLower)
+    if not mapping["GoogleQuota"]:
+      mapping["GoogleQuota"] = SuggestGoogleQuota(dictLower)
+
     return (trial, mapping)
