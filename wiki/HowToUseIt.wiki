@@ -630,5 +630,6 @@ stop exits the command interpreter. (as does control-D on Linux and control-Z on
 
 ==Possible Improvements==
 
-    * Need to retrofit to support Provisioning API v2 once the Python client wrappers are written.  Java wrappers are already in place.
-    * Need to integrate Google Groups, mailman list and ldap groups sync into this
+  * Need to retrofit to support Provisioning API v2 once the Python client wrappers are written.  Java wrappers are already in place.
+  * Need to integrate Google Groups, mailman list and ldap groups sync into this
+  * Perform a reverse-sync into LDAP from Google Apps, for organizations that want to make Google Apps their authoritative source for users.
