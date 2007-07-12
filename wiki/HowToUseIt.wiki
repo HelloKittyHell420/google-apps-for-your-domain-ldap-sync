@@ -21,7 +21,7 @@ The tool is written in Python and requires 2.4 or above.  It mines an LDAP serve
 It reads and writes its state to a CSV or XML file.  The overall workflow is:
 
   # Initially read in all the email users from LDAP, and save in a file.  All users are marked for addition to Google, but not added yet.  The necessary Google provisioning data (first name, last name, email user name, etc.) is created by mapping LDAP attributes:  initially the Tool guesses how to do that, and the user can refine the mappings as desired.
-  # Look at the data in Excel or some other favorite tool, and make any necessary changes.  Note that a lot of UI features (searching, scrolling, partial display, etc.) would be needed to make looking at the data pleasant, particularly if there were tens of thousands of users  It's explicitly not a goal to provide anything other than rudimentary display facilities.  This is a scriptable tool in a chain, not an LDAP data exploration tool.
+  # Look at the data in your favorite CSV reader (some popular spreadsheets can import CSV), and make any necessary changes.  Note that a lot of UI features (searching, scrolling, partial display, etc.) would be needed to make looking at the data pleasant, particularly if there were tens of thousands of users  It's explicitly not a goal to provide anything other than rudimentary display facilities.  This is a scriptable tool in a chain, not an LDAP data exploration tool.
   # Synchronize the users with Google.  For each user marked for addition, the user is added to the domain.
   # Subsequently, on a regular basis:  read in the user file and update it from LDAP.  New users are marked for addition to Google, terminated users are marked for deletion, users whose username has changed are marked for renaming, and users whose LDAP info has changed in other ways are marked for update.  The "synchronize with Google" command does all these changes.
 
@@ -82,7 +82,7 @@ Command: syncAllUsers
 # results not shown for privacy reasons
 }}}
 
-The syncAllUsers command would have authenticated with GAFYD, added the 11 new users, and updated the 45 whose information has changed.  The data file 'yourdomain.users.csv' is automatically saved upon exit.  Note that a perfectly reasonable variant on this workflow is to not do the syncAllUsers, and instead open up 'yourdomain.users.csv' in Excel or some other tool, and examine the 'meta-Google-action' column to make sure that the correct things will in fact be done by syncAllUsers.  The user might also want to run some other program on the CSV file, since the Tool really is just one part of a chain.
+The syncAllUsers command would have authenticated with GAFYD, added the 11 new users, and updated the 45 whose information has changed.  The data file 'yourdomain.users.csv' is automatically saved upon exit.  Note that a perfectly reasonable variant on this workflow is to not do the syncAllUsers, and instead open up 'yourdomain.users.csv' in a CSV reader tool, and examine the 'meta-Google-action' column to make sure that the correct things will in fact be done by syncAllUsers.  The user might also want to run some other program on the CSV file, since the Tool really is just one part of a chain.
 
 You may get an error similar to the following
 
@@ -411,7 +411,7 @@ If you think of the ultimate result of a tool session, it's an NxM table.  There
 ==Viewing the users==
 _showUsers, summarizeUsers  commands_
 
-Probably no matter how many times we say "It's not a data exploration tool.  Save the file and open it in some other tool like Excel if you really want to look at your data," admins are going to complain about this one.  C'est la vie.  (Maybe we should take the command out altogether?)
+Probably no matter how many times we say "It's not a data exploration tool.  Save the file and open it in some CSV reader if you really want to look at your data," admins are going to complain about this one.  C'est la vie.  (Maybe we should take the command out altogether?)
 
 `showUsers <start number> <end number>` displays the users from <start> to <end>.  It's intended just to get some rough idea what the user data looks like.  Here's an example:
 
@@ -473,7 +473,7 @@ Otherwise, a query is done on ldap_user_filter, and all old users no longer pass
 ===Synchronizing with Google===
 _summarizeUsers, markUsers, syncAllUsers, syncOneUser  commands_
 
-Each user has a meta-Google-action attribute, which is used by syncAllUsers, and as mentioned above, updateUsers tries to be smart about setting it appropriately.  Furthermore, the admin can always save the file and open it in some tool like Excel that makes it easy to search and edit en masse.  But for single user changes, markUsers can be used to change the meta-Google-action attribute.
+Each user has a meta-Google-action attribute, which is used by syncAllUsers, and as mentioned above, updateUsers tries to be smart about setting it appropriately.  Furthermore, the admin can always save the file and open it in a CSV reader that makes it easy to search and edit en masse.  But for single user changes, markUsers can be used to change the meta-Google-action attribute.
 
 summarizeUsers displays what your workload with respect to Google is:
 
