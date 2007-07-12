@@ -27,7 +27,7 @@ It reads and writes its state to a CSV or XML file.  The overall workflow is:
 
 ==Sample workflows==
 To motivate the rest of this doc, here are two examples of how an admin might use the Tool:
-Steady state
+===Steady state===
 In a steady state, the admin has previously mined the LDAP directory, added all the employees to GAFYD, and saved the users to a file 'yourdomain.users.csv'.  He/she has also saved a configuration file 'yourdomain.com.cfg'.  This workflow represents what would be done every day/week/whatever to sync up the LDAP directory with Google.
 The commands are shown in bold.
 
@@ -102,7 +102,7 @@ You may get this error
 which indicates you are attempting to use a quota different than the acceptable quotas for you domain.   This is set by google.
 
 
-Standing start
+===Standing start===
 There were two files used as input in the last example, yourdomain.com.cfg (the configuration) and yourdomain.users.csv (the actual employee data).  This is how we could have gotten them:
 
 {{{
@@ -411,7 +411,7 @@ If you think of the ultimate result of a tool session, it's an NxM table.  There
 ==Viewing the users==
 _showUsers, summarizeUsers  commands_
 
-Probably no matter how many times we say "It's not a data exploration tool.  Save the file and open it in some CSV reader if you really want to look at your data," admins are going to complain about this one.  C'est la vie.  (Maybe we should take the command out altogether?)
+This is not a data exploration tool.  Save the file and open it in some CSV reader if you really want to look at your data.
 
 `showUsers <start number> <end number>` displays the users from <start> to <end>.  It's intended just to get some rough idea what the user data looks like.  Here's an example:
 
@@ -464,10 +464,10 @@ _showLastUpdate, updateUsers  commands_
 When we want to pick up "changes" in LDAP since we last did an updateUsers, we have to answer the question "changes since when?"   There are a lot of possible ways to answer the "when" question, and we can and should debate that, but the provisional answer is "since you last did updateUsers."  So there is a meta-attribute "meta-last-updated" added to each user record giving the time that the updateUsers that brought in this user was issued.
 showLastUpdate displays the highest value of meta-last-updated.
 
-Furthermore, as far as I can tell there is no uniformity among LDAP schemas on the attribute representing "last changed" time  At Google it's "modifyTimestamp" but with ActiveDirectory it seems to be "whenChanged" (among other attributes that also have that information!), and LDAPv3 has a "modifiedTime" standard attribute (but of course v3 is hardly universal yet).  So one of the "attribute discovery" functions the tool does is suggest which attribute you want to use to denote "last changed".
+Furthermore, as far as I can tell there is no uniformity among LDAP schemas on the attribute representing "last changed" time  In openldap it's "modifyTimestamp" but with ActiveDirectory it seems to be "whenChanged" (among other attributes that also have that information!), and LDAPv3 has a "modifiedTime" standard attribute (but of course v3 is hardly universal yet).  So one of the "attribute discovery" functions the tool does is suggest which attribute you want to use to denote "last changed".
 updateUsers, then, finds T, the latest meta-last-updated attribute in the user database, and adds a term to the user filter "(modifyTimestamp>=T)" or "(whenChanged>=T)" or whatever attribute is being used for "last changed."  (It really ought to be ">" and not ">=", but for some reason LDAP doesn't support ">" and "<" in filters.)   Each user found by that query is added to the database with the value of another meta-attribute, "meta-Google-action", set to "add".
 After that, we want to find the users that are no longer active, so another query is done, in one of two ways, depending on whether the ldap_disabled_filter variable is defined:
-If there is both a ldap_disabled_filter and a timestamp defined:  a query is done on users passing the disabled filter, and having a timestamp greater than the last time we did updateUsers.    Those users are considered exi
+If there is both a ldap_disabled_filter and a timestamp defined:  a query is done on users passing the disabled filter, and having a timestamp greater than the last time we did updateUsers.    Those users are considered exited.
 Otherwise, a query is done on ldap_user_filter, and all old users no longer passing the query are considered exits.
 
 ===Synchronizing with Google===
