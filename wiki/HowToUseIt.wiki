@@ -98,7 +98,7 @@ You may get this error
 05-17 13:38 root         ERROR    failure to handle 'added' on ...: ProvisioningApiError: InvalidQuota(1041): Invalid quota '1024'
 }}}
 
-which indicates you are attempting to use a quota different than the acceptable quotas for you domain.   This is set by google.
+which indicates you are attempting to use a quota different than the acceptable quotas for you domain.   This is set by google.  You can set it to one of the quota options available to your domain by changing the GoogleQuota attribute via the `mapGoogleAttribute` command.  This attribute is also supported via GoogleQuotaCallback to user_transformation_rule.py.
 
 
 ===Standing start===
