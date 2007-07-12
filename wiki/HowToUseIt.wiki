@@ -63,7 +63,6 @@ Here you need to set several variables to indicate how to login administratively
 {{{
      set admin domain-admin@yourdomain.com
      set domain yourdomain.com
-     set quota 15360
      set password secret
 }}}
 
