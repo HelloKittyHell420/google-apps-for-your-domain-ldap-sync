@@ -149,8 +149,8 @@ This script references `../sync_ldap_env` which should contain something like
 
 BASEDIR=~/google-apps-for-your-domain-ldap-sync
 DOMAIN=yourdomain.com
-ADMINUSER=sync-ldap-role-account@$DOMAIN
-ADMINPASSWORD=secret
+ADMINUSER=google-apps-admin-role-account@$DOMAIN
+ADMINPASSWORD=google-apps-admin-role-account-password
 LDAPURL=LDAP://yourldap.$DOMAIN
 CONFIGFILE=$DOMAIN.cfg
 USERDATABASE=$DOMAIN.user.csv
