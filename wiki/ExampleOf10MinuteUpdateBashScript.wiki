@@ -27,6 +27,8 @@ You can setup a cron job to run every 10 minutes (or whatever) to sync your user
 # limitations under the License.
 #
 # Author: Robert Escorcio
+#
+# This script assumes google-apps-for-your-domain code has been placed in $BASEDIR/src
 
 # Set implementation-specific params
 cd `dirname $0` 
