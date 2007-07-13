@@ -32,7 +32,7 @@ You can setup a cron job to run every 10 minutes (or whatever) to sync your user
 cd `dirname $0` 
 . ../sync_ldap_env
 
-LDAPFILTER="(&(objectclass=organizationalPerson)(employeeStatus=active))"
+LDAPFILTER="(objectclass=organizationalPerson)"
 RUNTIME=`date +"%Y%m%d%H%M%S"`
 DELETELOGSOLDERTHANDAYS=30
 export PYTHONPATH=$BASEDIR:${PYTHONPATH#$BASEDIR}
