@@ -8,7 +8,7 @@
 
 ==Objective==
 
-The LDAP Synchronization Tool is designed to facilitate the initial provisioning of an enterprise on Google Apps For Your Domain ("GAFYD"), and ongoing maintainance thereafter.  Its goal is to be a scriptable tool which fits into an IT department's overall chain of tools for employee management, rather than an all-encompassing product.  For this reason, it does not have a GUI.  The intent is that the source code for the tool be made freely available, and therefore, no Google code libraries are used.
+The LDAP Synchronization Tool is designed to facilitate the initial provisioning of an enterprise on Google Apps For Your Domain ("GAFYD"), and ongoing maintainance thereafter.  Its goal is to be a scriptable tool which fits into an IT department's overall chain of tools for employee management, rather than an all-encompassing product.  For this reason, it does not have a GUI.  The intent is that the source code for the tool be made freely available.
 
 ==Background==
 Many organizations use an LDAP server for maintaining and serving data on employees, computers, printers, mail accounts, and much more.  Particularly, almost any Windows shop is very likely using Exchange with ActiveDirectory. 
