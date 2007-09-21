@@ -65,7 +65,7 @@ set -x
   $BASEDIR/src/sync_ldap.py >> $LOGFILE 2<&1 << EOF  
 set loglevel 9
 set ldap_url $LDAPURL
-set ldap_base_dn dc=google,dc=com
+set ldap_base_dn dc=yourdomain,dc=com
 set ldap_user_filter $LDAPFILTER
 set ldap_timeout 180
 set primary_key employeeNumber
@@ -160,3 +160,4 @@ LOGDIR=$BASEDIR/log
 LOGFILE=$LOGDIR/sync_ldap.log
 MAILTO=root@$DOMAIN
 }}}
+ 
