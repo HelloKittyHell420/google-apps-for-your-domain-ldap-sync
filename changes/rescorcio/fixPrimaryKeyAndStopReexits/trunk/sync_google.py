@@ -35,8 +35,6 @@ import google_result_queue
 import utils
 from google.appsforyourdomain import provisioning
 from google.appsforyourdomain import provisioning_errs
-from google.appsforyourdomain import provisioning_auth
-from google.appsforyourdomain import provisioning_backend
 
 # globals governing the threading system
 QUEUE_TIMEOUT = 20
@@ -140,10 +138,7 @@ class SyncGoogle(utils.Configurable):
                   'password': messages.MSG_SYNC_GOOGLE_PASSWORD,
                   'domain': messages.MSG_SYNC_GOOGLE_DOMAIN,
                   'max_threads': messages.MSG_SYNC_GOOGLE_MAX_THREADS,
-                  'google_operations': messages.MSG_SYNC_GOOGLE_ALLOWED,
-                  'endpoint': messages.MSG_SYNC_GOOGLE_ENDPOINT,
-                  'authurl': messages.MSG_SYNC_GOOGLE_AUTH_URL
-                  }
+                  'google_operations': messages.MSG_SYNC_GOOGLE_ALLOWED}
 
   def __init__(self, users, config, **moreargs):
     """ Constructor
@@ -155,59 +150,17 @@ class SyncGoogle(utils.Configurable):
     self.__admin = None
     self.__password = None
     self.__domain = None
-    self.__endpoint = None
-    self.__authurl = None
     self.__max_threads = 10
     self.__items_per_thread = 32
     self.__google_operations = None
     self._users = users
-    self.queue_google = None
-    self.queue_result = None
+    self._queue_google = None
+    self._queue_result = None
     self._apis = None
     self._gworkers = None
     super(SyncGoogle, self).__init__(config=config,
                                      config_parms=self.config_parms,
                                      **moreargs)
-
-  def DeleteFromUserDb(self, dn):
-    """ Delete user indicated by dn from userdb
-
-    Args:
-      dn: distinguished name of the user
-    """
-    self._users.DeleteUser(dn)
-
-  def _GetEndpoint(self):
-    return self.__endpoint
-
-  def __GetEndpoint(self):
-    return self._GetEndpoint()
-
-  def _SetEndpoint(self, attr):
-    self.__endpoint = attr
-    provisioning_backend.BASEURL = attr
-
-  def __SetEndpoint(self, attr):
-    self._SetEndpoint(attr)
-
-  endpoint = property(__GetEndpoint, __SetEndpoint, None,
-                         """The provisioning API host to use""")
-
-  def _GetAuthUrl(self):
-    return self.__authurl
-
-  def __GetAuthUrl(self):
-    return self._GetAuthUrl()
-
-  def _SetAuthUrl(self, attr):
-    self.__authurl = attr
-    provisioning_auth.AUTH_URL = attr
-
-  def __SetAuthUrl(self, attr):
-    self._SetAuthUrl(attr)
-
-  authurl = property(__GetAuthUrl, __SetAuthUrl, None,
-                         """The Auth URL to use""")
 
   # property getters & setters & overhead
   def _GetMaxThreads(self):
@@ -261,7 +214,9 @@ max_threads)
   def __SetAdmin(self, attr):
     self._SetAdmin(attr)
 
-  admin = property(__GetAdmin, __SetAdmin, None, "the administrator")
+  admin = property(__GetAdmin, __SetAdmin, None,
+       "the administrator"
+   )
 
   def _GetPassword(self):
     return self.__password
@@ -276,7 +231,8 @@ max_threads)
     self._SetPassword(attr)
 
   password = property(__GetPassword, __SetPassword, None,
-                      "administrator's password")
+       "administrator's password"
+   )
 
   def _GetDomain(self):
     return self.__domain
@@ -291,7 +247,8 @@ max_threads)
     self._SetDomain(attr)
 
   domain = property(__GetDomain, __SetDomain, None,
-                    "The Google Apps for Your Domain hosted domain")
+       "The Google Apps for Your Domain hosted domain"
+   )
 
   def _GetGoogleOperations(self):
     if not self.__google_operations:
@@ -303,10 +260,9 @@ max_threads)
     return self._GetGoogleOperations()
 
   def _SetGoogleOperations(self, attrs):
-    if type(attrs) is str:
-      attrs = attrs.split(',') 
     try:
-      for attr in attrs: # triggers TypeError if not a list
+      for i in xrange(len(attrs)): # triggers TypeError if not a list
+        attr = attrs[i]
         if attr not in self._users.google_action_vals:
           logging.error('%s not a valid action name' % attr)
           return
@@ -318,10 +274,9 @@ max_threads)
   def __SetGoogleOperations(self, attr):
     self._SetGoogleOperations(attr)
 
-  google_operations = property(__GetGoogleOperations, __SetGoogleOperations, 
-                               None,
-                               ("The actions permitted to be performed by "
-                                "this module."))
+  google_operations = property(__GetGoogleOperations, __SetGoogleOperations, None,
+        "The actions permitted to be performed by this module."
+   )
 
   def SetConfigVar(self, attr, val):
     """ Overrides: superclass (Configurable) method to enforce more
@@ -332,6 +287,8 @@ max_threads)
     """
     if not attr in self.config_parms:
       return messages.msg(messages.ERR_NO_SUCH_ATTR, attr)
+    if attr == 'google_operations':
+      return messages.ERR_NO_SET_OPERATIONS
     try:
       if attr == 'max_threads':
         try:
@@ -396,7 +353,7 @@ max_threads)
 
   def _Abort(self):
     """ Safely cancels an ongoing sync operation. Removes all entries from both
-    queue_google and queue_result.
+    _queue_google and _queue_result.
     This is called when the user presses the interrupt key
     (usually control-C).
     """
@@ -467,13 +424,13 @@ max_threads)
 
     # make sure we have the configuration items we need:
     self._config.TestConfig(self, ['admin', 'password', 'domain'])
-    self.queue_google = Queue.Queue(item_count)
-    self.queue_result = google_result_queue.GoogleResultQueue(item_count)
+    self._queue_google = Queue.Queue(item_count)
+    self._queue_result = google_result_queue.GoogleResultQueue(item_count)
     thread_count = self._ComputeThreadCount(item_count)
     logging.debug('forking %d threads' % thread_count)
 
     # establish the ThreadStats object:
-    self.thread_stats = ThreadStats()
+    self._thread_stats = ThreadStats()
 
     try:
       # create N API objects first, since that's what's most
@@ -484,7 +441,7 @@ max_threads)
         try:
           api = provisioning.API(self.admin, self.password,
                                  self.domain)
-          self.thread_stats.IncrementStat('authentications', 1)
+          self._thread_stats.IncrementStat('authentications', 1)
         except provisioning_errs.ProvisioningApiError, e:
           errs = str(e)
           logging.error(errs)
@@ -496,32 +453,33 @@ max_threads)
       if errs:
         for ix in len(self._apis):
           del self._apis[ix]
-        return self.thread_stats.GetStats()
+        return self._thread_stats.GetStats()
 
       # create the actual threads to read requests
       self._gworkers = []
 
       # here is where different subclasses of GoogleAction would be substituted:
       if action == 'added':
-        self.gclass = added_user_google_action.AddedUserGoogleAction
+        gclass = added_user_google_action.AddedUserGoogleAction
       elif action == 'exited':
-        self.gclass = exited_user_google_action.ExitedUserGoogleAction
+        gclass = exited_user_google_action.ExitedUserGoogleAction
       elif action == 'renamed':
-        self.gclass = renamed_user_google_action.RenamedUserGoogleAction
+        gclass = renamed_user_google_action.RenamedUserGoogleAction
       elif action == 'updated':
-        self.gclass = updated_user_google_action.UpdatedUserGoogleAction
+        gclass = updated_user_google_action.UpdatedUserGoogleAction
       else:
         raise RuntimeError('invalid action: %s' % action)
 
       # actually launch the worker threads:
       for ix in xrange(thread_count):
-        gworker = Gworker(self._apis[ix], self)
+        gworker = Gworker(self._apis[ix], self._queue_google, self._queue_result, gclass,
+                          self._thread_stats)
         gworker.setName('%s-%d' % (action, ix))
         self._gworkers.append(gworker)
         gworker.start()
 
       # create thread(s) to read the requests coming back
-      self._reader = StatusReader(self.queue_result, self._users,
+      self._reader = StatusReader(self._queue_result, self._users,
                                   google_result_handler.GoogleResultHandler)
       self._reader.start()
       logging.debug('done creating threads')
@@ -531,10 +489,10 @@ max_threads)
         dns = [dn_restrict]
       else:
         dns = self._users.UserDNs('meta-Google-action', action)
-      for dn in dns:
-        attrs = self._users.LookupDN(dn)
-        logging.debug('queueing %s' % dn)
-        self.queue_google.put((dn, attrs))
+        for dn in dns:
+          attrs = self._users.LookupDN(dn)
+          logging.debug('queueing %s' % dn)
+          self._queue_google.put((dn, attrs))
 
       # wait for all the threads to terminate
       for gworker in self._gworkers:
@@ -555,7 +513,7 @@ max_threads)
       self._Abort()
       logging.error('Done')
       pass
-    return self.thread_stats.GetStats()
+    return self._thread_stats.GetStats()
 
 
 class Gworker(threading.Thread):
@@ -565,28 +523,28 @@ class Gworker(threading.Thread):
   locking their account, or whatever the 'handleClass' class does.
   This is where the <action>GoogleAction classes are called.
   """
-  def __init__(self, api, sync_google):
+  def __init__(self, api, queueIn, queueOut, handleClass, thread_stats,
+               timeout=QUEUE_TIMEOUT):
     """ Constructor.
     Args:
       api: instance of google.appsforyourdomain.provisioning.API
       (which means the caller must have already authenticated with
       Google)
-      sync_google: instance of SyncGoogle object containing
-        queueIn: a queue for reading
-        gclass: a new-style Class object, which must be a subclass of
-          GoogleAct
-        thread_stats: an object of class ThreadStats, to be used for
-          accumulating statistics while we're running
+      queueIn: a queue for reading
+      handleClass: a new-style Class object, which must be a subclass of
+      GoogleAct
+      thread_stats: an object of class ThreadStats, to be used for
+      accumulating statistics while we're running
+      timeout: value in seconds which the thread should wait in dequeueing
+      from queueIn
     """
     threading.Thread.__init__(self)
-    self._queueIn = sync_google.queue_google
-    self._queueOut = sync_google.queue_result
-    self._timeout = QUEUE_TIMEOUT
+    self._queueIn = queueIn
+    self._queueOut = queueOut
+    self._timeout = timeout
     self._api = api
-    self._handleClass = sync_google.gclass
-    self._handler = sync_google.gclass(api, self._queueOut, 
-                                       sync_google.thread_stats,
-                                       vars=sync_google)
+    self._handleClass = handleClass
+    self._handler = handleClass(api, queueOut, thread_stats)
 
   def run(self):
     """ Starts the thread. This will keep reading the queue until it's

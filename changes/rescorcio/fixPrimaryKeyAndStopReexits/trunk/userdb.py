@@ -695,22 +695,22 @@ class UserDB(utils.Configurable):
     else: # no primary key
       return 'added'
 
-  def FindDeletedUsers(self, new_db):
+  def FindDeletedUsers(self, ldap_users):
     """ Use this after getting a complete list of users who pass
     your filter; this will find the users in the database NOT in
     that list, which you'll presumably then mark for deletion from
     Google.
     Args:
-      new_db : output of LdapContext.Search or AsyncSearch (which
+      ldap_users : output of LdapContext.Search or AsyncSearch (which
         should be an unrestrictive search that finds all your
         current users)
     Return:
-      list of DNs who are not in new_db
+      list of DNs who are not in ldap_users
     """
     deleted = []
-    old = new_db.UserDNs()
+    ldap_dns = ldap_users.UserDNs()
     for dn in self.UserDNs():
-      if dn not in old:
+      if dn not in ldap_dns:
         deleted.append(dn)
     return deleted
 

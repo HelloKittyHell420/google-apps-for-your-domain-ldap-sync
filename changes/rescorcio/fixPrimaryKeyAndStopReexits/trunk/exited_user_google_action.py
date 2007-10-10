@@ -68,7 +68,6 @@ class ExitedUserGoogleAction(google_action.GoogleAction):
       logging.debug('locked %s' % self.attrs['GoogleUsername'])
       self._thread_stats.IncrementStat('exits', 1)
       self._result_queue.PutResult(self.dn, 'exited')
-      self._sync_google.DeleteFromUserDb(dn)
     except provisioning_errs.ProvisioningApiError, e:
       # report failure
       logging.error('error: %s' % str(e))
