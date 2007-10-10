@@ -134,7 +134,8 @@ class Commands(cmd.Cmd):
       if self.ldap_context.Connect():
         logging.error(messages.msg(messages.ERR_CONNECT_FAILED))
       else:
-        logging.info(messages.msg(messages.MSG_CONNECTED, self.ldap_context.ldap_url))
+        logging.info(messages.msg(messages.MSG_CONNECTED, 
+                     self.ldap_context.ldap_url))
     except utils.ConfigError, e:
       logging.error(str(e))
 
@@ -146,7 +147,8 @@ class Commands(cmd.Cmd):
   def do_disconnect(self, rest):
     if self.ldap_context.Disconnect():
       logging.error(messages.msg(messages.ERR_DISCONNECT_FAILED))
-    logging.info(messages.msg(messages.MSG_DISCONNECTED, self.ldap_context.ldap_url))
+    logging.info(messages.msg(messages.MSG_DISCONNECTED, 
+                 self.ldap_context.ldap_url))
 
   def help_disconnect(self):
     print messages.msg(messages.HELP_DISCONNECT)
@@ -181,7 +183,8 @@ class Commands(cmd.Cmd):
       print messages.msg(messages.MSG_FIND_USERS_RETURNED, "0")
       return
 
-    print messages.msg(messages.MSG_FIND_USERS_RETURNED, str(self.new_users.UserCount()))
+    print messages.msg(messages.MSG_FIND_USERS_RETURNED, 
+                       str(self.new_users.UserCount()))
 
     # do it again with a small set, but get all attrs this time
     try:
@@ -367,7 +370,8 @@ class Commands(cmd.Cmd):
 
     # don't just spew out 20,000 users without a warning:
     if user_count > 10:
-      ans = raw_input(messages.msg(messages.ERR_TOO_MANY_USERS, str(user_count)))
+      ans = raw_input(messages.msg(messages.ERR_TOO_MANY_USERS, 
+                      str(user_count)))
       first = ans[:1].lower()
       if first != "y":
         return
@@ -471,7 +475,7 @@ class Commands(cmd.Cmd):
 
     # test the expression
     print messages.msg(messages.MSG_TESTING_MAPPING)
-    err = self.users.TestMapping(mapping)
+    err = self.users.TestMapping(mapping.strip())
     if err:
       logging.error(messages.msg(messages.ERR_MAPPING_FAILED))
       logging.error(err)
@@ -526,7 +530,8 @@ class Commands(cmd.Cmd):
         return
       if second:
         if second < 0 or second > len(dns) or second < first:
-          logging.error(messages.msg(messages.ERR_NUMBER_OUT_OF_RANGE, second_str))
+          logging.error(messages.msg(messages.ERR_NUMBER_OUT_OF_RANGE, 
+                        second_str))
           return
       for ix in xrange(first, second+1):
         self.users.SetGoogleAction(dns[ix], action)
@@ -537,13 +542,13 @@ class Commands(cmd.Cmd):
   """
   ******************  Synchronizing with Google
   Commands:
-    syncOneUser: sync a single user with UserDB AND with Google.  This is a two-way
-      sync, meaning it fetches the user's information from Google and compares it
-      to the current LDAP information.
-    syncAllUsers: sync all users with Google.  This is a one-way sync, i.e. it does
-      not fetch the list of users from Google and compare.  (in a future version of
-      the Provisioning API, this will be feasible;  right now (late 2006), it would
-      be too slow.
+    syncOneUser: sync a single user with UserDB AND with Google.  This is a 
+      two-way sync, meaning it fetches the user's information from Google and 
+      compares it to the current LDAP information.
+    syncAllUsers: sync all users with Google.  This is a one-way sync, i.e. it 
+      does not fetch the list of users from Google and compare.  (in a future 
+      version of the Provisioning API, this will be feasible;  right now (late 
+      2006), it would be too slow.
   """
 
 
@@ -593,7 +598,8 @@ class Commands(cmd.Cmd):
     attrs = self.users.LookupDN(dn)
     print messages.msg(messages.MSG_USER_IS_NOW, dn)
     if 'GoogleUsername' not in attrs:
-      logging.error(messages.msg(messages.ERR_NO_ATTR_FOR_USER, 'GoogleUsername'))
+      logging.error(messages.msg(messages.ERR_NO_ATTR_FOR_USER, 
+                                 'GoogleUsername'))
       return
     username = attrs['GoogleUsername']
 
@@ -813,7 +819,7 @@ class Commands(cmd.Cmd):
     else:
       stamp = ts
     cond = '%s>=%s.0Z' % (attr, time.strftime('%Y%m%d%H%M%S',
-                       time.localtime(stamp)))
+                          time.localtime(stamp)))
     s = "(&%s(%s))" % (search_filter, cond)
     logging.debug("new filter is: %s" % s)
     return s
@@ -831,7 +837,8 @@ class Commands(cmd.Cmd):
       return dns[0]
     else:
       if count > MAX_USER_DISPLAY:
-        logging.info(messages.msg(messages.MSG_HERE_ARE_FIRST_N, str(MAX_USER_DISPLAY)))
+        logging.info(messages.msg(messages.MSG_HERE_ARE_FIRST_N, 
+                     str(MAX_USER_DISPLAY)))
         limit = MAX_USER_DISPLAY
       for i in xrange(limit):
         print '%d: %s' % (i, dns[i])
@@ -897,15 +904,15 @@ class Commands(cmd.Cmd):
       return
     total_exits = 0
     if self.ldap_context.ldap_disabled_filter and self.users.GetTimestamp():
-      search_filter = self._AndUpdateTime(self.ldap_context.ldap_disabled_filter,
-                                  self.users.GetTimestamp(),
-                                  self.last_update)
+      search_filter = self._AndUpdateTime(
+          self.ldap_context.ldap_disabled_filter, self.users.GetTimestamp(),
+          self.last_update)
       try:
         attrs = self.users.GetAttributes()
         logging.debug(messages.msg(messages.MSG_FIND_EXITS,
                                    self.ldap_context.ldap_disabled_filter))
         userdb_exits = self.ldap_context.Search(filter_arg=search_filter,
-                              attrlist=attrs)
+                                                attrlist=attrs)
         if not userdb_exits:
           return
         logging.debug('userdb_exits=%s' % userdb_exits.UserDNs())
@@ -920,8 +927,7 @@ class Commands(cmd.Cmd):
     # Also: find ALL the users, and see which old ones are no longer
     # there:
     try:
-      total_users = self.ldap_context.Search(filter_arg=None,
-                                     attrlist=[])
+      total_users = self.ldap_context.Search(filter_arg=None, attrlist=[])
     except RuntimeError,e:
       logging.exception(str(e))
       return
@@ -933,7 +939,8 @@ class Commands(cmd.Cmd):
       self.users.SetGoogleAction(dn, 'exited')
       total_exits += 1
     if total_exits:
-      logging.info(messages.msg(messages.MSG_OLD_USERS_MARKED, str(total_exits)))
+      logging.info(messages.msg(messages.MSG_OLD_USERS_MARKED, 
+                                str(total_exits)))
 
   def _FindOneUser(self, expr):
     """ Utility for determining a single DN from a (presumably user-typed)
@@ -1112,7 +1119,7 @@ class Commands(cmd.Cmd):
     """
     attrs = self.users.LookupDN(dn)
     for gattr in ['GoogleFirstName', 'GoogleLastName', 'GoogleUsername',
-                  'GooglePassword']:
+                  'GooglePassword', 'GoogleQuota']:
       if gattr not in attrs:
         logging.error(messages.msg(messages.ERR_NO_ATTR_FOR_USER, gattr))
         return

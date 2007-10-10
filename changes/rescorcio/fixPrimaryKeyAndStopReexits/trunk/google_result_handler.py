@@ -63,6 +63,11 @@ class GoogleResultHandler(object):
     """
     if not failure:
       self._userdb.SetGoogleAction(dn, None)
+      # rescorcio - identified a bug in that the tool would reexit already
+      # exited users without this.  It did no harm but is annoying and fills 
+      # the log with junk.
+      if action == 'exited':
+        self._userdb.DeleteUser(dn) 
       logging.info('successfully handled \'%s\' on %s' %
                     (action, dn))
     else:

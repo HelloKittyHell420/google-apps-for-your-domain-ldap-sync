@@ -67,8 +67,6 @@ MSG_TRY_AGAIN = "Try again? "
 
 CHAR_YES = 'y'   # translate this to first letter of "yes" in your language
 
-CHAR_PROGRESS = '#' # an indication of progress for long-running operations
-
 ERR_INVALID_VALUE = "Invalid value for %s"
 
 MSG_Q_SAVE_CONFIG= """You did not supply a config file on the command line
@@ -177,6 +175,18 @@ in your LDAP server."""
 MSG_LDAP_TIMEOUT = """Timeout, in seconds, for retrieving records from your
 LDAP server. Note: this value may need to be large, 120 seconds or more, if
 you have a lot of employees."""
+
+MSG_TLS_OPTION = """This directive specifies what checks to perform on 
+certificates from the ldap server.  It specifies whether to require TLS at all, just accept it, or not use it.  'never' means don't use it at all, 'demand' 
+means to require that a successful TLS negotiation happens, and 'accept' means 
+to accept a TLS conversation but don't require it."""
+
+MSG_TLS_CACERTDIR = """A directory containing the CA that created the 
+certificate used by the ldap server.  This directory should be managed with 
+the c_rehash utility."""
+
+MSG_TLS_CACERTFILE = """This contains the PEM format file containing
+certificates for the CA that the tool will trust.  """
 
 # generic 'set' message
 MSG_SET_ANY= "Set a configuration variable. Choices are:"
@@ -562,3 +572,26 @@ HELP_BATCH = "Executes commands from a text file"
 MSG_STOPPING = "Stopping"
 
 HELP_STOP = "Exits"
+
+
+MSG_WRITE_CONFIG_FILE = "Writing config file to %s"
+
+MSG_SYNC_GOOGLE_ENDPOINT = ("The Google Apps host to target.   This is almost "
+                            "always unset unless you are a google developer "
+                            "working in the google private network.")
+
+MSG_SYNC_GOOGLE_AUTH_URL = ("The Google Apps Client Auth URL to target. "
+                            "This is almost always unset unless you are a "
+                            "google developer working in the google private "
+                            "network.")
+
+MSG_SYNC_RESULTS = "Results of synchronization operation with Google:"
+MSG_ADD_RESULTS = "%s users added successfully. %s users could not be added."
+MSG_EXITED_RESULTS = ("%s users exited successfully. %s users could not be "
+                      "exited.")
+MSG_RENAME_RESULTS = ("%s users renamed successfully. %s users could not be "
+                      "renamed.")
+MSG_UPDATE_RESULTS = ("%s users updated successfully. %s users could not be "
+                      "updated.")
+MSG_CONSULT_LOG = "Consult log file for details."
+

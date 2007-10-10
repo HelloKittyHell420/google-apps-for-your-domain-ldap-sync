@@ -2,6 +2,20 @@
 #
 # Copyright 2006 Google, Inc.
 # All Rights Reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License")
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+#
 
 """ The module that talks to the LDAP server
 
@@ -39,7 +53,10 @@ class LdapContext(utils.Configurable):
                   'ldap_user_filter': messages.MSG_LDAP_USER_FILTER,
                   'ldap_disabled_filter': messages.MSG_LDAP_DISABLED_FILTER,
                   'ldap_base_dn': messages.MSG_LDAP_BASE_DN,
-                  'ldap_timeout': messages.MSG_LDAP_TIMEOUT}
+                  'ldap_timeout': messages.MSG_LDAP_TIMEOUT,
+                  'tls_option': messages.MSG_TLS_OPTION,
+                  'tls_cacertdir': messages.MSG_TLS_CACERTDIR,
+                  'tls_cacertfile': messages.MSG_TLS_CACERTDIR}
 
   def __init__(self, config, **moreargs):
     """ Constructor
@@ -54,14 +71,33 @@ class LdapContext(utils.Configurable):
     self.ldap_base_dn = None
     self.ldap_timeout = TIMEOUT_SECS
     self.ldap_url = None
+    self.tls_option = 'never'
+    self.tls_cacertdir = '/etc/ssl/certs'
+    self.tls_cacertfile = ''
     super(LdapContext, self).__init__(config=config,
-                                    config_parms=self.config_parms,
-                                    **moreargs)
+                                      config_parms=self.config_parms,
+                                      **moreargs)
 
     self._config = config
     self._required_config = ['ldap_url', 'ldap_user_filter', 'ldap_base_dn']
     self.config_changed = False
     self.conn = None
+    if self.tls_option == 'demand':
+      ldap.set_option(ldap.OPT_X_TLS, ldap.OPT_X_TLS_DEMAND)
+    elif self.tls_option == 'allow':
+      ldap.set_option(ldap.OPT_X_TLS, ldap.OPT_X_TLS_ALLOW)
+    elif self.tls_option == 'never':
+      pass
+    else:
+      logging.exception('option tls_option=%s was not understood' %
+                        ldap_tls_option)
+      return
+
+    if self.tls_cacertdir:
+      ldap.set_option(ldap.OPT_X_TLS_CACERTDIR, self.tls_cacertdir)
+
+    if self.tls_cacertfile:
+      ldap.set_option(ldap.OPT_X_TLS_CACERTFILE, self.tls_cacertfile)
 
   def SetConfigVar(self, attr, val):
     """ Overrides: the superclass method, in order to provide more
@@ -159,8 +195,8 @@ class LdapContext(utils.Configurable):
     try:
       logging.debug('searching in %s\n\tfor%s\n\twith %s' % (self.ldap_base_dn,
                                               filter, str(attrlist)))
-      msgid = self.conn.search_ext(self.ldap_base_dn, ldap.SCOPE_SUBTREE, filter,
-                                   attrlist=attrlist)
+      msgid = self.conn.search_ext(self.ldap_base_dn, ldap.SCOPE_SUBTREE, 
+                                   filter, attrlist=attrlist)
       u = []
       for ix in range(sizelimit):
         ix += 1
@@ -213,8 +249,9 @@ class LdapContext(utils.Configurable):
       else:
         logging.debug('searching in %s\n\tfor%s\n\twith %s' %
                       (self.ldap_base_dn, filter, str(attrlist)))
-        u = self.conn.search_ext_s(self.ldap_base_dn, ldap.SCOPE_SUBTREE, filter,
-                                 attrlist=attrlist, timeout=self.ldap_timeout)
+        u = self.conn.search_ext_s(self.ldap_base_dn, ldap.SCOPE_SUBTREE, 
+                                   filter, attrlist=attrlist, 
+                                   timeout=self.ldap_timeout)
         return userdb.UserDB(config=self._config, users=u)
     except ldap.INSUFFICIENT_ACCESS, e:
       logging.exception('User %s lacks permission to do this search\n%s' %
