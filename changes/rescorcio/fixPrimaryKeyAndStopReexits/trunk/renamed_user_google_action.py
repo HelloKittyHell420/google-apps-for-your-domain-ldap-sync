@@ -61,10 +61,11 @@ class RenamedUserGoogleAction(google_action.GoogleAction):
       self._api.RenameAccount(attrs['meta-Google-old-username'],
                               attrs['GoogleUsername'])
       # report success
-      logging.debug('renamed %s to %s' % (self.attrs['meta-Google-old-username'],
-                    self.attrs['GoogleUsername']))
+      logging.debug('renamed %s to %s' % (
+        self.attrs['meta-Google-old-username'], self.attrs['GoogleUsername']))
       self._thread_stats.IncrementStat('renames', 1)
-      self._result_queue.PutResult(self.dn, 'renamed')
+      self._result_queue.PutResult(self.dn, 'renamed', None, 
+          self.attrs['GoogleUsername'])
     except provisioning_errs.ProvisioningApiError, e:
       # report failure
       logging.error('error: %s' % str(e))

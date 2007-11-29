@@ -23,8 +23,8 @@
 """
 
 import google_action
-import google_result_queue
 import logging
+import updated_user_google_action
 from google.appsforyourdomain import provisioning
 from google.appsforyourdomain import provisioning_errs
 
@@ -62,13 +62,38 @@ class AddedUserGoogleAction(google_action.GoogleAction):
     try:
       logging.debug('about to CreateAccount for %s' % \
                     self.attrs['GoogleUsername'])
+      moreargs = {}
+      if 'GoogleQuota' in self.attrs:
+        moreargs['quota'] = self.attrs['GoogleQuota']
       self._api.CreateAccountWithEmail(self.attrs['GoogleFirstName'],
                               self.attrs['GoogleLastName'],
                               self.attrs['GooglePassword'],
-                              self.attrs['GoogleUsername'])
-      self._result_queue.PutResult(self.dn, 'added')
+                              self.attrs['GoogleUsername'],
+                              **moreargs)
+      self._result_queue.PutResult(self.dn, 'added', None, 
+          self.attrs['GoogleUsername'])
       self._thread_stats.IncrementStat('adds', 1)
     except provisioning_errs.ProvisioningApiError, e:
+      if str(e).find('UserAlreadyExists') >= 0:
+        # trying to add a user that is already there is not an error
+        self._result_queue.PutResult(self.dn, 'added')
+        # Make sure that the user's attributes are synced because there is 
+        # no other time that this will get done.
+        logging.info('Attempted add of existing user.  Syncing attrs instead."')
+        updated_user_google_action.Update(self._api, attrs)
+        # Now make sure the account is unlocked if it is a valid user.
+        # Note: users are exited in only one of two ways:
+        # 1) the user matches an exit filter
+        # 2) the user disappeared from the ldap search filter that lists all 
+        #    users
+        # This method is never called on an account in state #1.  
+        # Consequently, we can safely unlock this account since
+        # it must have reappeared in our ldap query result (hence rebecame a 
+        # user) in order to be added.
+        logging.info('Making sure this account unlocked: ' +
+            self.attrs['GoogleUsername'])
+        self._api.UnlockAccount(self.attrs['GoogleUsername'])
+        return
       # report failure
       logging.error('error: %s' % str(e))
       self._thread_stats.IncrementStat('add_fails', 1)
