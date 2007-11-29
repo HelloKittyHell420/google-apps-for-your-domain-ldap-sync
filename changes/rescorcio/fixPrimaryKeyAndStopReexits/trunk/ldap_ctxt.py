@@ -24,7 +24,6 @@ class LdapContext:  class that encapsulates all LDAP info
 """
 
 
-import ConfigParser
 import ldap
 import logging
 import messages
@@ -56,7 +55,7 @@ class LdapContext(utils.Configurable):
                   'ldap_timeout': messages.MSG_LDAP_TIMEOUT,
                   'tls_option': messages.MSG_TLS_OPTION,
                   'tls_cacertdir': messages.MSG_TLS_CACERTDIR,
-                  'tls_cacertfile': messages.MSG_TLS_CACERTDIR}
+                  'tls_cacertfile': messages.MSG_TLS_CACERTFILE}
 
   def __init__(self, config, **moreargs):
     """ Constructor
@@ -90,7 +89,7 @@ class LdapContext(utils.Configurable):
       pass
     else:
       logging.exception('option tls_option=%s was not understood' %
-                        ldap_tls_option)
+                        self.tls_option)
       return
 
     if self.tls_cacertdir:
@@ -134,7 +133,7 @@ class LdapContext(utils.Configurable):
       self._config.TestConfig(self, ['ldap_url'])
       self.conn = ldap.initialize(self.ldap_url)
       self.conn.bind_s(self.ldap_admin_name, self.ldap_password,
-        ldap.AUTH_SIMPLE);
+        ldap.AUTH_SIMPLE)
       return None
     except ldap.INVALID_CREDENTIALS, e:
       logging.exception('Invalid credentials error:\n%s' % str(e))
@@ -163,12 +162,12 @@ class LdapContext(utils.Configurable):
     """
     return self.ldap_user_filter
 
-  def SetUserFilter(self, filter):
+  def SetUserFilter(self, query):
     """ Sets the current ldap_user_filter
     Args:
-      filter: a string containing a standard LDAP filter expression
+      query: a string containing a standard LDAP filter expression
     """
-    self.ldap_user_filter = filter
+    self.ldap_user_filter = query
 
   def AsyncSearch(self, filter_arg, sizelimit, attrlist=None):
     """  Does an async search, which, at least currently, we have to do to
@@ -185,18 +184,18 @@ class LdapContext(utils.Configurable):
       RuntimeError: if not connected
     """
     self._config.TestConfig(self, self._required_config)
-    filter = filter_arg
-    if not filter:
-      filter = self.ldap_user_filter
-    if not filter:
+    query = filter_arg
+    if not query:
+      query = self.ldap_user_filter
+    if not query:
       raise utils.ConfigError(['ldap_user_filter'])
     if not self.conn:
       raise RuntimeError('Not connected')
     try:
-      logging.debug('searching in %s\n\tfor%s\n\twith %s' % (self.ldap_base_dn,
-                                              filter, str(attrlist)))
+      logging.debug('Async search on %s\n\tfor%s\n\twith %s' % 
+          (self.ldap_base_dn, query, str(attrlist)))
       msgid = self.conn.search_ext(self.ldap_base_dn, ldap.SCOPE_SUBTREE, 
-                                   filter, attrlist=attrlist)
+                                   query, attrlist=attrlist)
       u = []
       for ix in range(sizelimit):
         ix += 1
@@ -208,12 +207,14 @@ class LdapContext(utils.Configurable):
           if len(u) >= sizelimit:
             u = u[:sizelimit]
             break
+      if u == []:
+        logging.warn(message.MSG_EMPTY_LDAP_SEARCH_RESULT)
     except ldap.INSUFFICIENT_ACCESS, e:
       logging.exception('User %s lacks permission to do this search\n%s' %
                         (self.ldap_admin_name, str(e)))
       return None
     except ldap.LDAPError, e:
-      logging.exception('LDAP error searching %s: %s', filter, str(e))
+      logging.exception('LDAP error searching %s: %s', query, str(e))
       return None
     return userdb.UserDB(config=self._config, users=u)
 
@@ -235,31 +236,30 @@ class LdapContext(utils.Configurable):
     self._config.TestConfig(self, self._required_config)
     if not self.conn:
       raise RuntimeError('Not connected')
-    filter = filter_arg
-    if not filter:
-      filter = self.ldap_user_filter
-    if not filter:
+    query = filter_arg
+    if not query:
+      query = self.ldap_user_filter
+    if not query:
       raise utils.ConfigError(['ldap_user_filter'])
     self.conn.network_timeout = self.ldap_timeout
     try:
       if sizelimit:
-        u = self.AsyncSearch(filter=filter, sizelimit=sizelimit,
-                             attrlist=attrlist)
+        u = self.AsyncSearch(query, sizelimit, attrlist=attrlist)
         return u
       else:
-        logging.debug('searching in %s\n\tfor%s\n\twith %s' %
-                      (self.ldap_base_dn, filter, str(attrlist)))
+        logging.debug('searching in %s for query %s attrs=%s' %
+                      (self.ldap_base_dn, query, str(attrlist)))
         u = self.conn.search_ext_s(self.ldap_base_dn, ldap.SCOPE_SUBTREE, 
-                                   filter, attrlist=attrlist, 
+                                   query, attrlist=attrlist, 
                                    timeout=self.ldap_timeout)
+        if u == []:
+          logging.warn(messages.MSG_EMPTY_LDAP_SEARCH_RESULT)
         return userdb.UserDB(config=self._config, users=u)
     except ldap.INSUFFICIENT_ACCESS, e:
       logging.exception('User %s lacks permission to do this search\n%s' %
                         (self.ldap_admin_name, str(e)))
-      return None
     except ldap.SIZELIMIT_EXCEEDED, e:
       logging.exception('Size limit exceeded on your server:\n%s' % str(e))
-      return None
     except ldap.LDAPError, e:
-      logging.exception('LDAP error searching %s: %s', filter, str(e))
-      return None
+      logging.exception('LDAP error searching query=%s: %s' % (query, str(e)))
+    return None

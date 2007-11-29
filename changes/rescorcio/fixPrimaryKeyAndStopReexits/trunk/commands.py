@@ -29,6 +29,7 @@ class Commands: main class, subclass of the Python cmd.Cmd class
 """
 
 import cmd
+import last_update_time
 import logging
 import messages
 import os
@@ -88,6 +89,17 @@ class Commands(cmd.Cmd):
     # code only for use of the unittest:
     self._testing_last_update = None
 
+  def precmd(self, line):
+    """Print the line just entered for debugging purposes.
+    Args:
+      line which is simply returned unchanged.
+    """
+    if line.lower().find('password') >= 0:
+      logging.debug("command: (command involving password not shown)")
+    else:
+      logging.debug("command: " + line)
+    return line
+
   """
   ******************  Configuration variable-setting
   Commands:
@@ -129,7 +141,7 @@ class Commands(cmd.Cmd):
 
   # *******************                    connect command
 
-  def do_connect(self, rest):
+  def do_connect(self, unused_rest):
     try:
       if self.ldap_context.Connect():
         logging.error(messages.msg(messages.ERR_CONNECT_FAILED))
@@ -144,7 +156,7 @@ class Commands(cmd.Cmd):
 
   # *******************                    disconnect command
 
-  def do_disconnect(self, rest):
+  def do_disconnect(self, unused_rest):
     if self.ldap_context.Disconnect():
       logging.error(messages.msg(messages.ERR_DISCONNECT_FAILED))
     logging.info(messages.msg(messages.MSG_DISCONNECTED, 
@@ -222,8 +234,8 @@ class Commands(cmd.Cmd):
 
     self.users.SetTimestamp(userdb.SuggestTimestamp(full_attr_set))
     print messages.msg(messages.MSG_SUGGESTED_TIMESTAMP)
-    if self.users.GetTimestamp():
-      print '\t%s' % self.users.GetTimestamp()
+    if self.users.GetTimestampAttributeName():
+      print '\t%s' % self.users.GetTimestampAttributeName()
     else:
       print messages.MSG_NO_TIMESTAMP
 
@@ -253,62 +265,62 @@ class Commands(cmd.Cmd):
 
   # *******************                    updateUsers command
 
-  def do_updateUsers(self, rest):
+  def do_updateUsers(self, unused_rest):
     try:
       if not self.ldap_context.GetUserFilter():
         logging.error(messages.ERR_NO_USER_FILTER)
         return
       print messages.msg(messages.MSG_ADDING, self.ldap_context.GetUserFilter())
       self._ShowGoogleAttributes()
-      now = time.time()
+      last_update_time.beginNewRun()
+      self.errors = False
 
       # add in the condition for "> lastUpdate"
       search_filter = self.ldap_context.ldap_user_filter
-      attrTime = self.users.GetTimestamp()
+      attrTime = self.users.GetTimestampAttributeName()
       if not attrTime:
         attrTime = 'meta-last-updated'
-      self.last_update = self._TimeFromLDAPTime(
-        self.users.GetAttributeMinMax(attrTime, False))
-
-      # since LDAP can't query on ">", just ">=":
-      if self.last_update:
-        self.last_update += 2
+      self.last_update = None
+      if last_update_time.get():
+        self.last_update = self._TimeFromLDAPTime(last_update_time.get())
 
       logging.debug('last_update time=%s' % str(self.last_update))
       attrs = self.users.GetAttributes()
+      directory_type = _GetDirectoryType(attrs)
       if self.last_update:
         search_filter = self._AndUpdateTime(search_filter,
-                   self.users.GetTimestamp(), self.last_update)
+                   self.users.GetTimestampAttributeName(), self.last_update,
+                   directory_type)
       try:
-        new_users = self.ldap_context.Search(filter_arg=search_filter,
+        found_users = self.ldap_context.Search(filter_arg=search_filter,
                                 attrlist=attrs)
       except RuntimeError,e:
         logging.exception(str(e))
         return
 
-      if not new_users or new_users.UserCount() == 0:
+      if not found_users or found_users.UserCount() == 0:
         print messages.msg(messages.MSG_FIND_USERS_RETURNED, "0")
 
-      if new_users:
+      if found_users:
         # we need to compute the Google attrs now, since
         # userdb.AnalyzeChangedUsers uses that:
-        self.users.MapGoogleAttrs(new_users)
-        (adds, mods, renames) = self.users.AnalyzeChangedUsers(new_users)
+        self.users.MapGoogleAttrs(found_users)
+        (adds, mods, renames) = self.users.AnalyzeChangedUsers(found_users)
 
         # mark new uses as "to be added to Google"
         for dn in adds:
-          new_users.SetGoogleAction(dn, 'added')
+          found_users.SetGoogleAction(dn, 'added')
         for dn in mods:
-          new_users.SetGoogleAction(dn, 'updated')
+          found_users.SetGoogleAction(dn, 'updated')
         for dn in renames:
-          new_users.SetGoogleAction(dn, 'renamed')
-        self.users.MergeUsers(new_users, now)
+          found_users.SetGoogleAction(dn, 'renamed')
+        self.users.MergeUsers(found_users)
         if adds:
-          print messages.msg(messages.MSG_NEW_USERS_ADDED,
-                             (str(len(adds)), str(self.users.UserCount())))
+          print messages.msg(messages.MSG_NEW_USERS_ADDED, (str(len(adds)), 
+            str(self.users.UserCount())))
         if mods:
-          print messages.msg(messages.MSG_UPDATED_USERS_MARKED,
-                             (str(len(mods))))
+          print messages.msg(messages.MSG_UPDATED_USERS_MARKED, 
+              (str(len(mods))))
         if renames:
           print messages.msg(messages.MSG_RENAMED_USERS_MARKED,
                              (str(len(renames))))
@@ -330,8 +342,8 @@ class Commands(cmd.Cmd):
   """
 
   # *******************                    showLastUpdate command
-  def do_showLastUpdate(self, rest):
-    self.last_update = self.users.GetAttributeMinMax('meta-last-updated', False)
+  def do_showLastUpdate(self, unused_rest):
+    self.last_update = last_update_time.get()
     if not self.last_update:
       print messages.MSG_SHOW_NO_LAST_UPDATE
     else:
@@ -386,7 +398,7 @@ class Commands(cmd.Cmd):
 
   # *******************                    summarizeUsers command
 
-  def do_summarizeUsers(self, rest):
+  def do_summarizeUsers(self, unused_rest):
     total = 0
     added = 0
     exited = 0
@@ -663,6 +675,8 @@ class Commands(cmd.Cmd):
       logging.error(str(e))
       return
 
+    last_update_time.updateIfNoErrors()
+
   def help_syncAllUsers(self):
     print messages.HELP_SYNC_USERS_GOOGLE
 
@@ -747,7 +761,7 @@ class Commands(cmd.Cmd):
 
   # *******************                    stop command
 
-  def do_stop(self, rest):
+  def do_stop(self, unused_rest):
     print messages.msg(messages.MSG_STOPPING)
 
     # don't know where this is documented, but returning something
@@ -806,19 +820,34 @@ class Commands(cmd.Cmd):
     return self._ChooseFromList(dns)
 
 
-  def _AndUpdateTime(self, search_filter, attr, ts):
+  def _AndUpdateTime(self, search_filter, timeStampAttr, ts, directoryType):
     """ AND in the "modifyTimestamp > time" condition
     to the filter
     Args:
       search_filter: LDAP filter expression
-      attr: name of LDAP attribute to receive the timestamp expression
-      ts: timestamp to use
+      timeStampAttr: name of LDAP attribute containing the timestamp
+      ts: what the value of the attribute indicated by timeStampAttr must be 
+          greater than.
+      directoryType: one of 'ad', 'openldap', 'eDirectory'. This is used to 
+          deal with differences in directories around querying 
+          modifyTimestamp
     """
     if self._testing_last_update:
       stamp = self._testing_last_update
     else:
       stamp = ts
-    cond = '%s>=%s.0Z' % (attr, time.strftime('%Y%m%d%H%M%S',
+    # NOTE: The following table summarizes the format the modifyTimestamp
+    #       filter needs to be in for various directories
+    #
+    #                    %sZ  %s.Z   %s.0Z
+    #  ad                 N     Y      Y
+    #  edirectory         Y     N      N
+    #  openldap           Y     N      Y
+    if directoryType == 'ad':
+      cond = '%s>=%s.Z' % (timeStampAttr, time.strftime('%Y%m%d%H%M%S',
+                          time.localtime(stamp)))
+    else:
+      cond = '%s>=%sZ' % (timeStampAttr, time.strftime('%Y%m%d%H%M%S',
                           time.localtime(stamp)))
     s = "(&%s(%s))" % (search_filter, cond)
     logging.debug("new filter is: %s" % s)
@@ -895,20 +924,17 @@ class Commands(cmd.Cmd):
     Even if we DO have a ldap_disabled_filter, still check for deleted
     entries, since you never know what might have happened.
 
-    The first time this tool is run, we don't do this, the theory being,
-    there's no point in disabling accounts on Google that never existed
-    in the first place. Of course, with a bulk-download feature, we might
-    decide that differently.
     """
-    if not self.last_update:
-      return
     total_exits = 0
-    if self.ldap_context.ldap_disabled_filter and self.users.GetTimestamp():
+    if (self.ldap_context.ldap_disabled_filter and 
+        self.users.GetTimestampAttributeName()):
+      attrs = self.users.GetAttributes()
+      directory_type = _GetDirectoryType(attrs)
       search_filter = self._AndUpdateTime(
-          self.ldap_context.ldap_disabled_filter, self.users.GetTimestamp(),
-          self.last_update)
+          self.ldap_context.ldap_disabled_filter, 
+          self.users.GetTimestampAttributeName(), self.last_update,
+          directory_type)
       try:
-        attrs = self.users.GetAttributes()
         logging.debug(messages.msg(messages.MSG_FIND_EXITS,
                                    self.ldap_context.ldap_disabled_filter))
         userdb_exits = self.ldap_context.Search(filter_arg=search_filter,
@@ -918,6 +944,10 @@ class Commands(cmd.Cmd):
         logging.debug('userdb_exits=%s' % userdb_exits.UserDNs())
         exited_users = userdb_exits.UserDNs()
         for dn in exited_users:
+          # Note: users previously marked added can be reset to exited
+          # if they match the exit filter.  This ensures 
+          # added_user_google_action is never called on a locked user that 
+          # exists in Google Apps 
           self.users.SetGoogleAction(dn, 'exited')
           total_exits += 1
       except RuntimeError,e:
@@ -926,17 +956,12 @@ class Commands(cmd.Cmd):
 
     # Also: find ALL the users, and see which old ones are no longer
     # there:
-    try:
-      total_users = self.ldap_context.Search(filter_arg=None, attrlist=[])
-    except RuntimeError,e:
-      logging.exception(str(e))
-      return
-    exited_users = self.users.FindDeletedUsers(total_users)
+    exited_users = self.users.FindDeletedUsers(self.ldap_context)
     if not exited_users:
       return
     logging.debug('deleted users=%s' % str(exited_users))
     for dn in exited_users:
-      self.users.SetGoogleAction(dn, 'exited')
+      self.users.SetIfUnsetGoogleAction(dn, 'exited')
       total_exits += 1
     if total_exits:
       logging.info(messages.msg(messages.MSG_OLD_USERS_MARKED, 
@@ -1023,8 +1048,8 @@ class Commands(cmd.Cmd):
     self.users.RemoveAllAttributes()
     for attr in self.trialAttrs:
       self.users.AddAttribute(attr)
-    if self.users.GetTimestamp():
-      self.users.AddAttribute(self.users.GetTimestamp())
+    if self.users.GetTimestampAttributeName():
+      self.users.AddAttribute(self.users.GetTimestampAttributeName())
     del self.trialAttrs
 
   def _SetSuggestedMappings(self):
@@ -1170,6 +1195,12 @@ class Commands(cmd.Cmd):
       tups = time.strptime(stime[:stime.find('.')], '%Y%m%d%H%M%S')
       ft = time.mktime(tups)
     except ValueError:
-      logging.debug('Unable to convert %s to a time' % stime)
+      logging.error('Unable to convert %s to a time' % stime)
       ft = None
     return ft
+
+def _GetDirectoryType(attrs):
+  directory_type = 'openldap'
+  if 'sAMAccountName' in attrs:
+    directory_type = 'ad'
+  return directory_type

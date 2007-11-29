@@ -177,7 +177,8 @@ LDAP server. Note: this value may need to be large, 120 seconds or more, if
 you have a lot of employees."""
 
 MSG_TLS_OPTION = """This directive specifies what checks to perform on 
-certificates from the ldap server.  It specifies whether to require TLS at all, just accept it, or not use it.  'never' means don't use it at all, 'demand' 
+certificates from the ldap server.  It specifies whether to require TLS at all, 
+just accept it, or not use it.  'never' means don't use it at all, 'demand' 
 means to require that a successful TLS negotiation happens, and 'accept' means 
 to accept a TLS conversation but don't require it."""
 
@@ -187,6 +188,12 @@ the c_rehash utility."""
 
 MSG_TLS_CACERTFILE = """This contains the PEM format file containing
 certificates for the CA that the tool will trust.  """
+
+MSG_SYNC_GOOGLE_LAST_UPDATE_FILE = """This contains the name of the file
+that will be used to store the last update time (the last point that a
+completely successful sync **began** running).  The assumption is that your
+ldap directory was completely up to date at that time.  This value defaults
+to /var/local/ldap-sync-last-update."""
 
 # generic 'set' message
 MSG_SET_ANY= "Set a configuration variable. Choices are:"
@@ -272,10 +279,10 @@ issued during the syncUsers command.
 
 MSG_TEST_FILTER_ATTRS = "The set of attributes defined on these users is:"
 
-MSG_SET_YOUR_ATTRS = "You should set the number of attributes retrieved\n\
-from LDAP and stored in the database and in the XML file, via the\n\
-setAttrList command. This will speed up processing and reduce the size of\n\
-the XML file."
+MSG_SET_YOUR_ATTRS = """You should set the number of attributes retrieved
+from LDAP and stored in the database and in the XML file, via the
+setAttrList command. This will speed up processing and reduce the size of
+the XML file."""
 
 HELP_TEST_FILTER = """Tests a search filter, and displays the number
 of users that match it.  Shows all attributes found on them, so that you
@@ -286,18 +293,19 @@ Example: testFilter [-f] (objectclass=inetOrgPerson)
  are automatically accepted.  (This is mainly for batch processing.)
 """
 
-ERR_TEST_FILTER_SAMPLING = "Retrieving all attributes on a small sample of these..."
+ERR_TEST_FILTER_SAMPLING = """Retrieving all attributes on a small sample of 
+these..."""
 
-MSG_ATTR_SET_IS = "The set of unique attributes on a sample of %s\n\
-users matching this filter is:\n"
+MSG_ATTR_SET_IS = """The set of unique attributes on a sample of %s\n\
+users matching this filter is:"""
 
 MSG_SUGGESTED_ATTRS = """The following attributes are suggested for keeping
 in your database:"""
 
-MSG_SUGGESTED_MAPPINGS = """The Google user attributes (first name, last name, etc.)
-could be derived from your LDAP attributes as follows:"""
+MSG_SUGGESTED_MAPPINGS = """The Google user attributes (first name, last name, 
+etc.) could be derived from your LDAP attributes as follows:"""
 
-MSG_SUGGESTED_TIMESTAMP = """The \"last updated\" timestamp attribute could be:
+MSG_SUGGESTED_TIMESTAMP = """The 'last updated' timestamp attribute could be:
 """
 
 MSG_SUGGESTED_PRIMARY_KEY = 'The "primary_key" attribute could be:'
@@ -306,13 +314,13 @@ MSG_NO_TIMESTAMP = "(none found)"
 
 MSG_ACCEPT_SUGGESTIONS = "Accept these suggestions?"
 
-MSG_SAID_NO_SUGGESTIONS = "You can use the attrList and mapGoogleAttribute commands\n\
-later to tailor the lists as you need them."
+MSG_SAID_NO_SUGGESTIONS = """You can use the attrList and mapGoogleAttribute 
+commands later to tailor the lists as you need them."""
 
 # attrList command:
 
-MSG_ATTR_REMOVED = "'%s' removed. There were %s users with non-null values\n\
-for that attribute."
+MSG_ATTR_REMOVED = """'%s' removed. There were %s users with non-null values
+for that attribute."""
 
 
 MSG_USAGE_ATTR_LIST = """Usage:
@@ -340,8 +348,7 @@ attrList show  (displays the current list)
 ERR_SHOW_USERS_ARGS = "Invalid arguments. Enter one or two numbers."
 
 HELP_SHOW_USERS = """Usage: showNewUsers [start [end]] where 'start'
-and 'end' are numbers.
-Displays some or all of the users.
+and 'end' are numbers.  Displays some or all of the users.
 """
 
 ERR_TOO_MANY_USERS = "There are %s users.  Show them all?"
@@ -358,8 +365,7 @@ Marked as updated: %s
 """
 
 HELP_SUMMARIZE_USERS = """Displays summary information about user database:
-Total number of users,
-Number of users marked added/exited/renamed/updated
+Total number of users, Number of users marked added/exited/renamed/updated
 """
 
 
@@ -367,7 +373,8 @@ Number of users marked added/exited/renamed/updated
 
 MSG_UNIQUE_ATTRS_ARE = "Unique attributes on user objects are:"
 
-HELP_UNIQUE_ATTRS =  "Shows all attributes found on user objects discovered so far"
+HELP_UNIQUE_ATTRS =  """Shows all attributes found on user objects discovered 
+so far"""
 
 
 # showAttributes command:
@@ -375,9 +382,7 @@ HELP_UNIQUE_ATTRS =  "Shows all attributes found on user objects discovered so f
 MSG_MAPPINGS = "All attributes, with current Google attribute mappings:"
 
 HELP_MAPPINGS = """Shows all LDAP attributes found on users in the database
-with the current mappings from Google attributes
-to LDAP attributes
-"""
+with the current mappings from Google attributes to LDAP attributes """
 
 MSG_ENTER_MAPPING = "Expression:"
 
@@ -390,9 +395,9 @@ ERR_MAP_ATTR = "Enter a Google attribute to map. Choices are:"
 
 ERR_MAPPING_FAILED = "Test failed.  Error was"
 
-HELP_MAP_ATTR= "Map a Google attribute to an LDAP attribute.\n\
-You can also use a Python expression on several attributes. Consult\n\
-the documentation for details."
+HELP_MAP_ATTR= """Map a Google attribute to an LDAP attribute.
+You can also use a Python expression on several attributes. Consult
+the documentation for details."""
 
 MSG_TESTING_MAPPING = "Testing your mapping on a random sample of users..."
 
@@ -407,8 +412,7 @@ MSG_WHICH_USER = 'Which user did you mean?  Enter the number, or -1 for none: '
 
 ERR_SUPPLY_VALID_USER= """Please supply a unique query expression for the user
 you want to synchronize. The expression should be in the form:
-<attribute>=<value>
-"""
+<attribute>=<value> """
 
 MSG_FOUND_IN_USERDB = """There are %s users in the user database that match
 your query."""
@@ -449,7 +453,7 @@ Usage:
 # updateUsers command:
 
 MSG_ADDING = """Add users that match your user filter of
-%s
+%s 
 with Google attributes mapped as follows:"""
 
 MSG_FIND_EXITS = """Finding users whose accounts have been disabled,
@@ -475,14 +479,14 @@ MSG_RENAMED_USERS_MARKED = """Found %s users in database which
 have changed in LDAP, and marked them for renaming in Google
 Apps for Your Domain."""
 
-HELP_ADD_USERS = "Adds users to the database that match\n\
-your User Filter.  Google attributes are mapped according to\n\
-the mappings you've set up.  If a user is already in the database,\n\
-the attributes are updated. You can optionally limit the number of users\n\
-you add.\n\
-Usage: addUsers [max number]\n\
-where [max number] is the most that will be added. If not given, all\n\
-users passing the filter are added."
+HELP_ADD_USERS = """Adds users to the database that match
+your User Filter.  Google attributes are mapped according to
+the mappings you have set up.  If a user is already in the database,
+the attributes are updated. You can optionally limit the number of users
+you add.
+Usage: addUsers [max number]
+where [max number] is the most that will be added. If not given, all
+users passing the filter are added."""
 
 
 
@@ -527,9 +531,12 @@ MSG_CONNECTED_GOOGLE = "Connected"
 
 MSG_SYNC_RESULTS = "Results of synchronization operation with Google:"
 MSG_ADD_RESULTS = "%s users added successfully. %s users could not be added."
-MSG_EXITED_RESULTS = "%s users exited successfully. %s users could not be exited."
-MSG_RENAME_RESULTS = "%s users renamed successfully. %s users could not be renamed."
-MSG_UPDATE_RESULTS = "%s users updated successfully. %s users could not be updated."
+MSG_EXITED_RESULTS = """%s users exited successfully. %s users could not be 
+exited."""
+MSG_RENAME_RESULTS = """%s users renamed successfully. %s users could not be 
+renamed."""
+MSG_UPDATE_RESULTS = """%s users updated successfully. %s users could not be 
+updated."""
 MSG_CONSULT_LOG = "Consult log file for details."
 
 ERR_CONNECTING_GOOGLE = "Problem connecting to your Google domain:\n%s"
@@ -576,22 +583,32 @@ HELP_STOP = "Exits"
 
 MSG_WRITE_CONFIG_FILE = "Writing config file to %s"
 
-MSG_SYNC_GOOGLE_ENDPOINT = ("The Google Apps host to target.   This is almost "
-                            "always unset unless you are a google developer "
-                            "working in the google private network.")
+MSG_SYNC_GOOGLE_ENDPOINT = """The Google Apps host to target.   This is almost 
+always unset unless you are a google developer working in the google private 
+network."""
 
-MSG_SYNC_GOOGLE_AUTH_URL = ("The Google Apps Client Auth URL to target. "
-                            "This is almost always unset unless you are a "
-                            "google developer working in the google private "
-                            "network.")
+MSG_SYNC_GOOGLE_AUTH_URL = """The Google Apps Client Auth URL to target. 
+This is almost always unset unless you are a google developer working in the 
+google private network."""
 
 MSG_SYNC_RESULTS = "Results of synchronization operation with Google:"
 MSG_ADD_RESULTS = "%s users added successfully. %s users could not be added."
-MSG_EXITED_RESULTS = ("%s users exited successfully. %s users could not be "
-                      "exited.")
-MSG_RENAME_RESULTS = ("%s users renamed successfully. %s users could not be "
-                      "renamed.")
-MSG_UPDATE_RESULTS = ("%s users updated successfully. %s users could not be "
-                      "updated.")
+MSG_EXITED_RESULTS = """%s users exited successfully. %s users could not be 
+exited."""
+MSG_RENAME_RESULTS = """%s users renamed successfully. %s users could not be 
+renamed."""
+MSG_UPDATE_RESULTS = """%s users updated successfully. %s users could not be 
+updated."""
 MSG_CONSULT_LOG = "Consult log file for details."
+
+MSG_EXIT_EXITED_USER = """Attempted exit of %s which does not exist in 
+Google Apps."""
+
+MSG_LAST_UPDATE_TIME_NOT_UPDATED = """Not updating last update time due to
+prior errors or inactivity."""
+
+MSG_UPDATING_LAST_UPDATE_TIME = "Updating last update time to %s"
+
+MSG_EMPTY_LDAP_SEARCH_RESULT = "Empty ldap search result"
+MSG_SUCCESSFULLY_HANDLED = "Successfully handled action '%s' on dn %s"
 
