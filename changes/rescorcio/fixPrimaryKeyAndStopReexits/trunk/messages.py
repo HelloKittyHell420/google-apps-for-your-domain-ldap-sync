@@ -296,7 +296,7 @@ Example: testFilter [-f] (objectclass=inetOrgPerson)
 ERR_TEST_FILTER_SAMPLING = """Retrieving all attributes on a small sample of 
 these..."""
 
-MSG_ATTR_SET_IS = """The set of unique attributes on a sample of %s\n\
+MSG_ATTR_SET_IS = """The set of unique attributes on a sample of %s
 users matching this filter is:"""
 
 MSG_SUGGESTED_ATTRS = """The following attributes are suggested for keeping
@@ -539,7 +539,7 @@ MSG_UPDATE_RESULTS = """%s users updated successfully. %s users could not be
 updated."""
 MSG_CONSULT_LOG = "Consult log file for details."
 
-ERR_CONNECTING_GOOGLE = "Problem connecting to your Google domain:\n%s"
+ERR_CONNECTING_GOOGLE = "Problem connecting to your Google domain: %s"
 
 HELP_SYNC_USERS_GOOGLE = """Synchronize the user database with Google Apps for
 Your Domain.  This involves processing users according

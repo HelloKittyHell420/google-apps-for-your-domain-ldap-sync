@@ -1,3 +1,20 @@
+#!/usr/bin/python2.4
+#
+# Copyright 2006 Google, Inc.
+# All Rights Reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License")
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 import logging
 import time
 import logging
@@ -22,7 +39,7 @@ def setFilename(name):
   """
   global FILENAME
   FILENAME = name
-  logging.debug('last_update_time.setFilename: to ' + name)
+  logging.debug('last_update_time.setFilename: to %s' % name)
 
 def _set(struct_time):
   """ Set the last update time. 
@@ -33,8 +50,8 @@ def _set(struct_time):
   global LASTUPDATEFILE
   LASTUPDATEFILE = file(FILENAME, 'w')
   ldap_time = time.strftime('%Y%m%d%H%M%S', struct_time)
-  logging.debug('last_udpate_time._set(): setting time to ' + ldap_time)
-  LASTUPDATEFILE.write(ldap_time + '\n')
+  logging.debug('last_udpate_time._set(): setting time to %s' % ldap_time)
+  LASTUPDATEFILE.write('%s\n' % ldap_time)
 
 def get():
   """ Return the last update time as a string.
@@ -58,7 +75,7 @@ def beginNewRun():
   global NEXT_UPDATE_TIME
   global WAS_ERRORS
   NEXT_UPDATE_TIME = time.gmtime()
-  logging.debug('last_update_time.beginNewRun(): baseline set to ' + 
+  logging.debug('last_update_time.beginNewRun(): baseline set to %s' % 
       str(NEXT_UPDATE_TIME))
   WAS_ERRORS = False
 

@@ -207,8 +207,8 @@ class LdapContext(utils.Configurable):
           if len(u) >= sizelimit:
             u = u[:sizelimit]
             break
-      if u == []:
-        logging.warn(message.MSG_EMPTY_LDAP_SEARCH_RESULT)
+      if not u:
+        logging.warn(messages.MSG_EMPTY_LDAP_SEARCH_RESULT)
     except ldap.INSUFFICIENT_ACCESS, e:
       logging.exception('User %s lacks permission to do this search\n%s' %
                         (self.ldap_admin_name, str(e)))
@@ -252,7 +252,7 @@ class LdapContext(utils.Configurable):
         u = self.conn.search_ext_s(self.ldap_base_dn, ldap.SCOPE_SUBTREE, 
                                    query, attrlist=attrlist, 
                                    timeout=self.ldap_timeout)
-        if u == []:
+        if not u:
           logging.warn(messages.MSG_EMPTY_LDAP_SEARCH_RESULT)
         return userdb.UserDB(config=self._config, users=u)
     except ldap.INSUFFICIENT_ACCESS, e:

@@ -189,17 +189,15 @@ def AttrListCompare(attrList, first, second):
       raise RuntimeError('attr %s not present' % attr)
     val_first = first[attr]
     val_second = second[attr]
-    if val_first == '' and not val_second: 
-      return 0
-    if val_second == '' and not val_first: 
+    if not val_first and not val_second: 
       return 0
     if val_first < val_second:
-      logging.debug('Attibutes differ ' + attr + ' ' + str(val_first) + ' < ' +
-          str(val_second))
+      logging.debug('Attibutes differ %s %s<%s' % (attr, str(val_first), 
+          str(val_second)))
       return -1
     elif val_first > val_second:
-      logging.debug('Attributes differ ' + attr + ' ' + str(val_first) + ' > ' +
-          str(val_second))
+      logging.debug('Attibutes differ %s %s>%s' % (attr, str(val_first), 
+          str(val_second)))
       return 1
   return 0
 
@@ -449,7 +447,7 @@ class UserDB(utils.Configurable):
     (root, ext) = os.path.splitext(fname)
     lext = ext.lower()
     if lext != ".xml" and lext != ".csv":
-      raise RuntimeError("Unrecognized file type: " + ext)
+      raise RuntimeError("Unrecognized file type: %s" % ext)
     if lext == ".csv":
       (added, excluded) = self._ReadCSVFile(fname)
     else:
@@ -503,13 +501,11 @@ class UserDB(utils.Configurable):
       dn: the DN of the user to be set
       val: the value to set the attribute to
     """
-    logging.debug("Trying to set google action to " + val + " userdb=" +
-        str(self.db[dn]))
     if "meta-Google-action" in self.db[dn]:
       action = self.db[dn]["meta-Google-action"]
       if action and action != "":
-        logging.debug(dn + " ignoring request to set action to " + val + 
-            " because action was already set to " + action)
+        logging.debug('Ignoring request to set action on dn %s to %s because '
+                      'action was already set to %s' % (dn, val, action))
         return
     return self.SetGoogleAction(dn, val)
 
@@ -523,7 +519,7 @@ class UserDB(utils.Configurable):
         class variable 'google_action_vals'
     """
     if val != None and val not in self.google_action_vals:
-      raise RuntimeError("Invalid Google action value: %s" + str(val))
+      raise RuntimeError("Invalid Google action value: %s" % str(val))
     dn = dn_arg.lower()
     if not dn in self.db:
       self.db[dn] = {"meta-Google-action":val}
@@ -541,7 +537,7 @@ class UserDB(utils.Configurable):
     """
     dn = dn_arg.lower()
     if name not in self.meta_attrs:
-      raise RuntimeError("Invalid meta-attr: " + name)
+      raise RuntimeError("Invalid meta-attr: %s" % name)
     if not dn in self.db:
       self.db[dn] = {name:val}
     else:
@@ -609,7 +605,7 @@ class UserDB(utils.Configurable):
     (root, ext) = os.path.splitext(fname)
     lext = ext.lower()
     if lext != ".xml" and lext != ".csv":
-      raise RuntimeError("Unrecognized file type: " + ext)
+      raise RuntimeError("Unrecognized file type: %s" % ext)
     dns = self.UserDNs()
     dns.sort()
     if lext == ".xml":
@@ -689,21 +685,21 @@ class UserDB(utils.Configurable):
       else: # an existing DN   
         if 'meta-last-updated' in self.db[dn]:
           if self.db[dn]['meta-last-updated'] >= attrs[self.timestamp]:
-            logging.debug('SKIPPING existing dn ' + dn + ' meta-last-updated ' +
-                self.db[dn]['meta-last-updated'] + " >= " +
-                attrs[self.timestamp])
+            logging.debug('SKIPPING existing dn %s, userdb '
+                ' meta-last-updated=%s which is more recent than %s' %
+                (dn, self.db[dn]['meta-last-updated'], attrs[self.timestamp]))
             continue
         if attrs['GoogleUsername'] != self.db[dn]['GoogleUsername']:
-          logging.debug('RENAME! existing dn=' + dn + 
-              ' different GoogleUsername ' + attrs['GoogleUsername']
-              + ' != ' + self.db[dn]['GoogleUsername'])
+          logging.debug('RENAME! existing dn=%s different userdb '
+              'GoogleUsername=%s != ldap %s'  % 
+              (dn, self.db[dn]['GoogleUsername'], attrs['GoogleUsername']))
           renames.append(dn)
         elif self._GoogleAttrsCompare(dn, attrs):
-          logging.debug('UPDATE! existing dn=' + dn + ' same GoogleUsername ' +
-            ' attrs differ.')
+          logging.debug('UPDATE! existing dn=%s same GoogleUsername '
+            ' attrs differ.' % dn)
           mods.append(dn)
         else:
-          logging.debug('SKIPPING! existing dn=' + dn + ' same attrs ')
+          logging.debug('SKIPPING! existing dn=%s same attrs ' % dn)
     return (adds, mods, renames)
 
   def _AnalyzeNewDN(self, dn_arg, attrs):
@@ -721,26 +717,24 @@ class UserDB(utils.Configurable):
       if dn:
         if self.db[dn]['GoogleUsername'] == attrs['GoogleUsername']:
           if self._GoogleAttrsCompare(dn, attrs):
-            logging.debug('UPDATE! dn ' + dn + ' found by primary key, same ' +
-              'GoogleUsername attrs differ ')
+            logging.debug('UPDATE! dn=%s found by primary key, same '
+              'GoogleUsername attrs differ ' % dn)
             return 'updated'
           else:
-            logging.debug('SKIPPING dn ' + dn + 
-                ' found by primary key, same GoogleUsername' + 
-                ' attrs same ')
+            logging.debug('SKIPPING dn=%s found by primary key, same '
+                'GoogleUsername attrs same ' % dn)
             return None
         else:
           meta_attr = 'meta-Google-old-username'
           self.db[dn][meta_attr] = self.db[dn]['GoogleUsername']
-          logging.debug('RENAME! dn ' + dn + 
-              ' found by primary key, different ' +
-              ' GoogleUsername attrs same ')
+          logging.debug('RENAME! dn=%s found by primary key, different '
+              ' GoogleUsername attrs same ' % dn)
           return 'renamed'
       else:
-        logging.debug('ADD! not in userdb dn=' + str(dn_arg))
+        logging.debug('ADD! not in userdb dn=%s' % str(dn_arg))
         return 'added'
     else: # no primary key
-      logging.debug('ADD! new dn ' + dn + ' no primary key defined ')
+      logging.debug('ADD! new dn %s no primary key defined ' % dn)
       return 'added'
 
   def FindDeletedUsers(self, ldap_context):
@@ -762,11 +756,11 @@ class UserDB(utils.Configurable):
     ldap_dns = ldap_users.UserDNs()
     for dn in self.UserDNs():
       if dn not in ldap_dns:
-        logging.debug(dn + " is a deletion candidate self.db[dn]=" + 
+        logging.debug("%s is a deletion candidate self.db[dn]=" % 
             str(self.db[dn]))
         if 'meta-Google-action' in self.db[dn]:
           if self.db[dn]['meta-Google-action'] == 'previously-exited':
-            logging.debug('Skipping exit.  Already exited ' + dn)
+            logging.debug('Skipping exit.  Already exited %s' % dn)
             continue
         deleted.append(dn)
     return deleted
@@ -787,19 +781,19 @@ class UserDB(utils.Configurable):
         if 'meta-Google-old-username' in self.db[dn]:
           old_username = self.db[dn]['meta-Google-old-username']
       else:
-        logging.debug(dn + " not in userdb.  Checking if it changed")
+        logging.debug("%s not in userdb.  Checking if it changed" % dn)
         # Check if dn changed
         if self.primary_key: 
           dnInUserDb = self._FindPrimaryKey(attrs)
           if dnInUserDb:
-            logging.debug("The dn found by primary key is " + str(dnInUserDb))
+            logging.debug("The dn found by primary key is %s" % str(dnInUserDb))
             if dn != dnInUserDb:  
               # it changed so delete the old dn to prevent adding a duplicate of
               # the same user under a new dn (if you allow this then an exit 
               # will be be performed on the old userdb entry when both the dn 
               # and the username changes at the same time in ldap)
-              logging.debug("Replacing old userdb entry " + dnInUserDb + 
-                  " with " + dn)
+              logging.debug('Replacing old userdb entry %s with %s' % 
+                  (dnInUserDb, dn))
               old_username = self.db[dnInUserDb]['GoogleUsername']
               self.DeleteUser(dnInUserDb)
       self.db[dn] = self._MapUser(attrs)
@@ -810,9 +804,9 @@ class UserDB(utils.Configurable):
       self._UpdateAttrList(attrs)
 
   def __str__(self):
-    result = ""
+    result = ''
     for (dn, attrs) in self.db.iteritems():
-      result += "userdb key " + dn + " contains attrs = " + str(attrs) + "\n"
+      result += 'userdb key %s contains attrs = %s\n' % (dn, str(attrs))
     return result
 
   """
@@ -919,7 +913,7 @@ class UserDB(utils.Configurable):
       try:
         u_value = unicode(text_value, 'utf-8')
       except UnicodeDecodeError:
-        attr_node.appendChild(doc.createTextNode("{base64}" + 
+        attr_node.appendChild(doc.createTextNode("{base64}%s" % 
             base64.b64encode(text_value)))
         user_node.appendChild(attr_node)
         continue
@@ -958,7 +952,7 @@ class UserDB(utils.Configurable):
           if attr not in self.mapping.keys(): # should not delete the Google*
                                               # attributes no matter what
             if attr not in self.meta_attrs:   # meta attrs exempt too
-              logging.debug('Not including attr ' + attr)
+              logging.debug('Not including attr %s' % attr)
               del row[attr]
     self.db[dn] = row
     self._UpdateAttrList(row)
@@ -1147,7 +1141,7 @@ class UserDB(utils.Configurable):
       # set the meta-attributes
       self.SetMetaAttribute(dn, "meta-last-updated", now)
     if not foundAny:
-      logging.warn(message.MSG_EMPTY_LDAP_SEARCH_RESULT)
+      logging.warn(messages.MSG_EMPTY_LDAP_SEARCH_RESULT)
 
   def _DeletePrimaryKey(self, attrs):
     """ Delete the primary key found in 'attrs' from the primary key
@@ -1218,8 +1212,10 @@ class UserDB(utils.Configurable):
         try:
           attr_val = eval(expr, copy_of_attrs)
           if type(attr_val) is list:
-            attr_val = attr_val[0]         # attr_val retyped! and cn values 
+            attr_val = attr_val[0]         # attr_val retyped! and values 
                                            # other than the 1st are ignored
+          else:
+            attr_val = str(attr_val)       # possible retyping
           result[key] = attr_val.strip()
         except (NameError, SyntaxError):
           result[key] = None  # make sure it's got something
@@ -1325,8 +1321,8 @@ def _GuidRange(key, start, end):
     incr = -1
   result = ""
   for i in xrange(start, end + incr, incr):
-    result += "\\" + _GuidElement(key, i)
+    result += '\\%s' % _GuidElement(key, i)
   return result
 
 def _GuidElement(key, i):
-  return ("0%X" % ord(key[i]))[-2:]
+  return ('0%X' % ord(key[i]))[-2:]

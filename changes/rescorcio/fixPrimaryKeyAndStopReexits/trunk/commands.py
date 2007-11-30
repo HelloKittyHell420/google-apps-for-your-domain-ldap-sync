@@ -95,9 +95,9 @@ class Commands(cmd.Cmd):
       line which is simply returned unchanged.
     """
     if line.lower().find('password') >= 0:
-      logging.debug("command: (command involving password not shown)")
+      logging.debug('command: (command involving password not shown)')
     else:
-      logging.debug("command: " + line)
+      logging.debug('command: %s' % line)
     return line
 
   """
@@ -390,7 +390,7 @@ class Commands(cmd.Cmd):
     dns = self.users.UserDNs()
     print "Display new users %d to %d" % (start, end)
     for ix in xrange(start-1, end):
-      print "%d: %s" % (ix+1, dns[ix])
+      print "%d: %s" % (ix + 1, dns[ix])
       pp.pprint(self.users.LookupDN(dns[ix]))
 
   def help_showUsers(self):
@@ -545,7 +545,7 @@ class Commands(cmd.Cmd):
           logging.error(messages.msg(messages.ERR_NUMBER_OUT_OF_RANGE, 
                         second_str))
           return
-      for ix in xrange(first, second+1):
+      for ix in xrange(first, second + 1):
         self.users.SetGoogleAction(dns[ix], action)
 
   def help_markUsers(self):
@@ -1098,7 +1098,7 @@ class Commands(cmd.Cmd):
       logging.error(messages.msg(messages.ERR_CANT_USE_EXPR, expr))
       return (None, None)
     attr = expr[:ix].strip()
-    val = expr[ix+1:].strip()
+    val = expr[ix + 1:].strip()
     return (attr, val)
 
   def _TwoWayCompare(self, dn, google_result, google_result_old=None):

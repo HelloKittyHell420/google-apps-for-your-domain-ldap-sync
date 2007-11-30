@@ -74,7 +74,8 @@ class AddedUserGoogleAction(google_action.GoogleAction):
           self.attrs['GoogleUsername'])
       self._thread_stats.IncrementStat('adds', 1)
     except provisioning_errs.ProvisioningApiError, e:
-      if str(e).find('UserAlreadyExists') >= 0:
+      # report failure
+      if str(e).find('UserAlreadyExists') >= 0: 
         # trying to add a user that is already there is not an error
         self._result_queue.PutResult(self.dn, 'added')
         # Make sure that the user's attributes are synced because there is 
@@ -90,14 +91,13 @@ class AddedUserGoogleAction(google_action.GoogleAction):
         # Consequently, we can safely unlock this account since
         # it must have reappeared in our ldap query result (hence rebecame a 
         # user) in order to be added.
-        logging.info('Making sure this account unlocked: ' +
+        logging.info('Making sure this account unlocked: %s' %
             self.attrs['GoogleUsername'])
         self._api.UnlockAccount(self.attrs['GoogleUsername'])
-        return
-      # report failure
       logging.error('error: %s' % str(e))
       self._thread_stats.IncrementStat('add_fails', 1)
       self._result_queue.PutResult(self.dn, 'added', str(e))
+      return
 
 if __name__ == '__main__':
   pass

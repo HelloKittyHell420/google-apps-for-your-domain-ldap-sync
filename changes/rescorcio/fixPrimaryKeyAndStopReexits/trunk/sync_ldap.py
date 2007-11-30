@@ -159,7 +159,7 @@ def GetParser():
   """ Return a parser that's set up with our options.  This is a separate method
   so the unit tester can call it.
   """
-  parser = OptionParser(usage='%prog [-v][-q] [-f <dataFile>]' +
+  parser = OptionParser(usage='%prog [-v][-q] [-f <dataFile>]'
                         '[-c <configFile>]',
                         version="%prog 0.9")
   parser.add_option("-f", "--dataFile", dest="data_file",
