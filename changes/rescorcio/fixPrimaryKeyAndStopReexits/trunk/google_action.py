@@ -41,11 +41,15 @@ class GoogleAction(object):
                                     result_queue=result_queue,
                                      **moreargs)
 
-  def Handle(self, unused_dn, unused_attrs):
+  def Handle(self, dn, attrs):
     """ Handle a single user with Distinguished Name 'dn' and attributes
     'attrs'
     This is an abstract method; subclasses MUST override.
+    Args:
+      dn: distinguished name of the user
+      attrs: dictionary of all the user's attributes
     """
+    (attrs, dn) = (dn, attrs)  # silence pychecker
     raise RuntimeError('Unimplemented')
 
 if __name__ == '__main__':

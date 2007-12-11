@@ -214,7 +214,7 @@ class LdapContext(utils.Configurable):
                         (self.ldap_admin_name, str(e)))
       return None
     except ldap.LDAPError, e:
-      logging.exception('LDAP error searching %s: %s', query, str(e))
+      logging.exception('LDAP error searching %s: %s' % (query, str(e)))
       return None
     return userdb.UserDB(config=self._config, users=u)
 
