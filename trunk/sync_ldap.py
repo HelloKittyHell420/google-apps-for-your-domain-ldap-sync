@@ -94,13 +94,12 @@ def GetValidFileFromUser():
                        messages.msg(messages.ERR_NOT_VALID_FILE_NAME, fname))
       fname = None
 
-def DoMain(options, args):
+def DoMain(options):
   """ main module. A client of the optparse module for command-line
   parsing.
   Args:
     options: first return value from parser.parse_args(), where 'parser' is a
       optparse.OptionParser
-    args: second return value from parser.parse_args()
   """
   (config, ldap_context, user_database, google_context, log_config) = \
     SetupMain(options)
@@ -160,8 +159,8 @@ def GetParser():
   """ Return a parser that's set up with our options.  This is a separate method
   so the unit tester can call it.
   """
-  parser = OptionParser(usage="""%prog [-v][-q] [-f <dataFile>]
-   [-c <configFile>]""",
+  parser = OptionParser(usage='%prog [-v][-q] [-f <dataFile>]'
+                        '[-c <configFile>]',
                         version="%prog 0.9")
   parser.add_option("-f", "--dataFile", dest="data_file",
     help="User data file (XML or CSV), both read from and written to.")
@@ -177,4 +176,4 @@ if __name__ == '__main__':
   parser = GetParser()
   (options, args) = parser.parse_args()
   (config, ldap_context, user_database, google_context, log_config) = \
-      DoMain(options, args)
+      DoMain(options)

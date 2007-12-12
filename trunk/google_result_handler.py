@@ -16,7 +16,8 @@
 # limitations under the License.
 
 import logging
-import userdb
+import last_update_time
+import messages
 
 """ Contains superclass for GoogleResultHandler:
  class GoogleResultHandler: superclass for all "GoogleResultHandlers"
@@ -61,13 +62,23 @@ class GoogleResultHandler(object):
         handler. One example is the GoogleActionCheck object, which passes
         back the account status from Google.
     """
-    if not failure:
-      self._userdb.SetGoogleAction(dn, None)
-      logging.info('successfully handled \'%s\' on %s' %
-                    (action, dn))
-    else:
+    if failure:
+      last_update_time.reportError()
       logging.error('failure to handle \'%s\' on %s: %s' %
                     (action, dn, failure))
+    else:
+      self._userdb.SetGoogleAction(dn, None)
+      # rescorcio - identified a bug in that the tool would reexit already
+      # exited users without this.  It did no harm but is annoying and fills 
+      # the log with junk.
+      if action == 'exited':
+        self._userdb.SetMetaAttribute(dn, 'meta-Google-action', 
+            'previously-exited')
+      if object:
+        if action == 'renamed' or action == 'added':
+          # We should only ever change the old username on add or rename
+          self._userdb.SetMetaAttribute(dn, "meta-Google-old-username", object)
+      logging.info(messages.MSG_SUCCESSFULLY_HANDLED  % (action, dn))
 
 if __name__ == '__main__':
   pass

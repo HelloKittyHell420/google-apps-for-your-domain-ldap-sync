@@ -23,8 +23,8 @@
 """
 
 import google_action
-import google_result_queue
 import logging
+import messages
 from google.appsforyourdomain import provisioning
 from google.appsforyourdomain import provisioning_errs
 
@@ -49,6 +49,8 @@ class ExitedUserGoogleAction(google_action.GoogleAction):
                                     **moreargs)
     self._api = api
     self._result_queue = result_queue
+    if 'vars' in moreargs:
+      self._sync_google = moreargs['vars']
 
   def Handle(self, dn, attrs):
     """ Override of superclass.Handle() method
@@ -67,6 +69,12 @@ class ExitedUserGoogleAction(google_action.GoogleAction):
       self._thread_stats.IncrementStat('exits', 1)
       self._result_queue.PutResult(self.dn, 'exited')
     except provisioning_errs.ProvisioningApiError, e:
+      # TODO(rescorcio): revisit
+      if str(e).find('InvalidEmailException') >= 0:
+        # trying to exit a user that has already been deleted is not an error
+        logging.warn(messages.MSG_EXIT_EXITED_USER % dn)
+        self._result_queue.PutResult(self.dn, 'exited')
+        return
       # report failure
       logging.error('error: %s' % str(e))
       self._thread_stats.IncrementStat('exit_fails', 1)

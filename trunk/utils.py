@@ -135,22 +135,10 @@ class LogConfig(Configurable):
     """configure the logging system according to our settings
     """
     # logging.basicConfig(level=self.loglevel,
+    print('Setting logging level to %s' % str(self.loglevel))
     logging.basicConfig(level=int(self.loglevel),
-                        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                        datefmt='%m-%d %H:%M',
-                        filename=self.logfile,
-                        filemode='w')
-    # define a Handler which writes INFO messages or higher to the sys.stderr
-    console = logging.StreamHandler()
-    console.setLevel(self.loglevel)
-
-    # set a format which is simpler for console use
-    formatter = logging.Formatter('%(message)s')
-    # tell the handler to use this format
-    console.setFormatter(formatter)
-    # add the handler to the root logger
-    logging.getLogger('').addHandler(console)
-    # now we're ready for the Config object to log errors, if any
+        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+        datefmt='%m-%d %H:%M', filename=self.logfile, filemode='w')
     self._config.StartLogging()
 
 class Config(object):

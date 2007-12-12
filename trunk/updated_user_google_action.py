@@ -59,17 +59,8 @@ class UpdatedUserGoogleAction(google_action.GoogleAction):
     """
     self.dn = dn
     self.attrs = attrs
-    mapping_for_updates = {'firstName': 'GoogleFirstName', 
-                           'lastName': 'GoogleLastName',
-                           'password': 'GooglePassword'}
-    fields = {}
-    for (key, google_key) in mapping_for_updates.iteritems():
-      if google_key in attrs and attrs[google_key]:
-        fields[key] = attrs[google_key]
     try:
-      logging.debug('about to UpdateAccount for %s' % \
-                    self.attrs['GoogleUsername'])
-      self._api.UpdateAccount(self.attrs['GoogleUsername'], fields)
+      Update(self._api, attrs)
 
       # report success
       logging.debug('updated %s' % self.attrs['GoogleUsername'])
@@ -80,6 +71,21 @@ class UpdatedUserGoogleAction(google_action.GoogleAction):
       logging.error('error: %s' % str(e))
       self._thread_stats.IncrementStat('update_fails', 1)
       self._result_queue.PutResult(self.dn, 'updated', str(e))
+
+def Update(api, attrs):
+  """ Update the Google Account given by dn with attrs.
+  Args:
+    attrs: dictionary of all the user's attributes
+  """
+  mapping_for_updates = {'firstName': 'GoogleFirstName', 
+                         'lastName': 'GoogleLastName',
+                         'password': 'GooglePassword'}
+  fields = {}
+  for (key, google_key) in mapping_for_updates.iteritems():
+    if google_key in attrs and attrs[google_key]:
+      fields[key] = attrs[google_key]
+  logging.debug('about to UpdateAccount for %s' % attrs['GoogleUsername'])
+  api.UpdateAccount(attrs['GoogleUsername'], fields)
 
 if __name__ == '__main__':
   pass
