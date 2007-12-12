@@ -81,7 +81,7 @@ class UserTransformationRule(object):
     """
     try:
       self.Mapping(ldap)
-    except KeyError, e:
+    except KeyError:
       return False
     return True
 
@@ -170,7 +170,7 @@ class UserTransformationRule(object):
     Returns:
       a list of all callback function names.
     """
-    return [attr + "Callback" for attr in self.google_attributes]
+    return ['%sCallback' % attr for attr in self.google_attributes]
 
   def Mapping(self, attrs):
     """ Return a dict containing callback function name, value for attrs.
@@ -184,7 +184,7 @@ class UserTransformationRule(object):
     """
     mappings = {}
     for attr in self.google_attributes:
-      mappings[attr + 'Callback'] = self._TransformAttr(attr, attrs)
+      mappings['%sCallback' % attr] = self._TransformAttr(attr, attrs)
     return mappings
 
   def __init__(self):

@@ -26,6 +26,7 @@ import added_user_google_action
 import exited_user_google_action
 import updated_user_google_action
 import renamed_user_google_action
+import last_update_time
 import logging
 import messages
 import Queue
@@ -142,7 +143,8 @@ class SyncGoogle(utils.Configurable):
                   'max_threads': messages.MSG_SYNC_GOOGLE_MAX_THREADS,
                   'google_operations': messages.MSG_SYNC_GOOGLE_ALLOWED,
                   'endpoint': messages.MSG_SYNC_GOOGLE_ENDPOINT,
-                  'authurl': messages.MSG_SYNC_GOOGLE_AUTH_URL
+                  'authurl': messages.MSG_SYNC_GOOGLE_AUTH_URL,
+                  'last_update_file': messages.MSG_SYNC_GOOGLE_LAST_UPDATE_FILE
                   }
 
   def __init__(self, users, config, **moreargs):
@@ -160,6 +162,9 @@ class SyncGoogle(utils.Configurable):
     self.__max_threads = 10
     self.__items_per_thread = 32
     self.__google_operations = None
+    self.__last_update_file = '/var/local/ldap-sync-last-update'
+    last_update_time.initialize()
+    last_update_time.setFilename(self.__last_update_file)
     self._users = users
     self.queue_google = None
     self.queue_result = None
@@ -168,6 +173,22 @@ class SyncGoogle(utils.Configurable):
     super(SyncGoogle, self).__init__(config=config,
                                      config_parms=self.config_parms,
                                      **moreargs)
+
+  def _GetLastupdatefile(self):
+    return self.__last_update_file
+
+  def __GetLastupdatefile(self):
+    return self._GetLastupdatefile()
+
+  def _SetLastupdatefile(self, attr):
+    self.__last_update_file = attr
+    last_update_time.setFilename(attr)
+
+  def __SetLastupdatefile(self, attr):
+    self._SetLastupdatefile(attr)
+
+  last_update_file = property(__GetLastupdatefile, __SetLastupdatefile, None,
+                         """File containing the date of the last good run""")
 
   def _GetEndpoint(self):
     return self.__endpoint
@@ -303,7 +324,7 @@ max_threads)
           logging.error('%s not a valid action name' % attr)
           return
     except TypeError:
-      logging.exception('invalid format; must be a list: ' % str(attrs))
+      logging.exception('invalid format; must be a list: %s' % str(attrs))
       return
     self.__google_operations = attrs
 
@@ -392,7 +413,7 @@ max_threads)
     This is called when the user presses the interrupt key
     (usually control-C).
     """
-    if self._apis is not null:
+    if self._apis:
       del self._apis
 
   def DoAdds(self, dn_restrict=None):

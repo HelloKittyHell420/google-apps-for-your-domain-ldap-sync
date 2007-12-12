@@ -49,6 +49,7 @@ class GoogleAction(object):
       dn: distinguished name of the user
       attrs: dictionary of all the user's attributes
     """
+    (attrs, dn) = (dn, attrs)  # silence pychecker
     raise RuntimeError('Unimplemented')
 
 if __name__ == '__main__':

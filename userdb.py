@@ -45,12 +45,12 @@ import random
 import re
 import threading
 import time
-import traceback
 import types
 import utils
 import user_transformation_rule
 import xml.dom
 import xml.dom.minidom
+import base64
 from xml.sax._exceptions import *
 
 
@@ -95,6 +95,8 @@ def SuggestGoogleUsername(dictLower):
   attrs = dictLower.values()
   if "mail" in attrs:
     return "mail[:mail.find('@')]"
+  if 'sAMAccountName' in attrs:
+    return 'sAMAccountName'
 
 def SuggestGoogleLastName(dictLower):
 
@@ -160,8 +162,10 @@ def SuggestPrimaryKey(attrs):
   """ Suggest a "primary key" attribute to use for detecting renames
   Return: attribute name, or None if none looked suitable
   """
-  if attrs.count('entryUUID'):
+  if 'entryUUID' in attrs:  # openldap
     return 'entryUUID'
+  if 'objectGUID' in attrs: # active directory
+    return 'objectGUID'
 
 def AttrListCompare(attrList, first, second):
   """ Compare two user records (actually any dictionary) on a
@@ -185,9 +189,15 @@ def AttrListCompare(attrList, first, second):
       raise RuntimeError('attr %s not present' % attr)
     val_first = first[attr]
     val_second = second[attr]
+    if not val_first and not val_second: 
+      return 0
     if val_first < val_second:
+      logging.debug('Attibutes differ %s %s<%s' % (attr, str(val_first), 
+          str(val_second)))
       return -1
     elif val_first > val_second:
+      logging.debug('Attibutes differ %s %s>%s' % (attr, str(val_first), 
+          str(val_second)))
       return 1
   return 0
 
@@ -253,8 +263,7 @@ class UserDB(utils.Configurable):
                           'meta-Google-old-username'))
 
   # these are all the "Google actions" there are:
-  google_action_vals = frozenset(('added', 'exited', 'updated',
-                                  'renamed'))
+  google_action_vals = frozenset(('added', 'exited', 'updated', 'renamed'))
 
   # all the Google variables which we can use to provision users:
   google_update_vals = frozenset(('GoogleFirstName','GoogleLastName',
@@ -349,7 +358,10 @@ class UserDB(utils.Configurable):
       self._DeletePrimaryKey(attrs)
       del self.db[dn]
 
-  def GetAttributeMinMax(self, attr, fmin=False):
+  def GetAttributeMax(self, attr):
+    return self.__GetAttributeMinMax(attr, fmin=False)
+
+  def __GetAttributeMinMax(self, attr, fmin=False):
     """ For a given attribute (e.g. meta-last-updated), get the
     (min / max) of it across the database.  Typically you'd use this to get
     the time the database was last sync'ed.
@@ -387,7 +399,7 @@ class UserDB(utils.Configurable):
     lst.sort()
     return lst
 
-  def GetTimestamp(self):
+  def GetTimestampAttributeName(self):
     """
     Returns:
       the attribute to be used as the timestamp, or None if none was
@@ -435,7 +447,7 @@ class UserDB(utils.Configurable):
     (root, ext) = os.path.splitext(fname)
     lext = ext.lower()
     if lext != ".xml" and lext != ".csv":
-      raise RuntimeError("Unrecognized file type: " + ext)
+      raise RuntimeError("Unrecognized file type: %s" % ext)
     if lext == ".csv":
       (added, excluded) = self._ReadCSVFile(fname)
     else:
@@ -483,6 +495,21 @@ class UserDB(utils.Configurable):
           self.mapping[gattr] = None
     return count
 
+  def SetIfUnsetGoogleAction(self, dn, val):
+    """ Set the intended Google action if it wasn't already set.
+    Args:
+      dn: the DN of the user to be set
+      val: the value to set the attribute to
+    """
+    if "meta-Google-action" in self.db[dn]:
+      action = self.db[dn]["meta-Google-action"]
+      if action and action != "":
+        logging.debug('Ignoring request to set action on dn %s to %s because '
+                      'action was already set to %s' % (dn, val, action))
+        return
+    return self.SetGoogleAction(dn, val)
+
+
   def SetGoogleAction(self, dn_arg, val):
     """ Set the intended Google action for a user
     (attribute = meta-Google-action)
@@ -492,7 +519,7 @@ class UserDB(utils.Configurable):
         class variable 'google_action_vals'
     """
     if val != None and val not in self.google_action_vals:
-      raise RuntimeError("Invalid Google action value: %s" + str(val))
+      raise RuntimeError("Invalid Google action value: %s" % str(val))
     dn = dn_arg.lower()
     if not dn in self.db:
       self.db[dn] = {"meta-Google-action":val}
@@ -510,7 +537,7 @@ class UserDB(utils.Configurable):
     """
     dn = dn_arg.lower()
     if name not in self.meta_attrs:
-      raise RuntimeError("Invalid meta-attr: " + name)
+      raise RuntimeError("Invalid meta-attr: %s" % name)
     if not dn in self.db:
       self.db[dn] = {name:val}
     else:
@@ -572,21 +599,19 @@ class UserDB(utils.Configurable):
     or the other)
     Args;
       fname: name of the file to write
-    Return:
-      set of attributes which couldn't be written out
     Raises:
       IOError: if the file couldn't be written
     """
     (root, ext) = os.path.splitext(fname)
     lext = ext.lower()
     if lext != ".xml" and lext != ".csv":
-      raise RuntimeError("Unrecognized file type: " + ext)
+      raise RuntimeError("Unrecognized file type: %s" % ext)
     dns = self.UserDNs()
     dns.sort()
     if lext == ".xml":
-      return self._WriteXMLFile(fname, dns)
+      self._WriteXMLFile(fname, dns)
     else:
-      return self._WriteCSVFile(fname, dns)
+      self._WriteCSVFile(fname, dns)
 
   """
   *********************************************************************
@@ -623,6 +648,8 @@ class UserDB(utils.Configurable):
       else  (no primary key defined)
         it's an add
     else (it's an existing DN)
+      if ldap modification time is not more recent than the last mod in userdb
+        ignore because the change was already processed
       if the GoogleUsername has changed
         it's a rename
       else if ANY Google attribute has changed
@@ -642,7 +669,6 @@ class UserDB(utils.Configurable):
     be a harmless update to some LDAP parameter, "harmless" meaning
     it doesn't require any updates to Google
     """
-
     adds = []
     mods = []
     renames = []
@@ -656,14 +682,24 @@ class UserDB(utils.Configurable):
           mods.append(dn)
         elif res == 'renamed':
           renames.append(dn)
-      else: # an existing DN
-        logging.debug('existing dn: %s' % dn)
+      else: # an existing DN   
+        if 'meta-last-updated' in self.db[dn]:
+          if self.db[dn]['meta-last-updated'] >= attrs[self.timestamp]:
+            logging.debug('SKIPPING existing dn %s, userdb '
+                ' meta-last-updated=%s which is more recent than %s' %
+                (dn, self.db[dn]['meta-last-updated'], attrs[self.timestamp]))
+            continue
         if attrs['GoogleUsername'] != self.db[dn]['GoogleUsername']:
-          meta_attr = 'meta-Google-old-username'
-          self.db[dn][meta_attr] = self.db[dn]['GoogleUsername']
+          logging.debug('RENAME! existing dn=%s different userdb '
+              'GoogleUsername=%s != ldap %s'  % 
+              (dn, self.db[dn]['GoogleUsername'], attrs['GoogleUsername']))
           renames.append(dn)
         elif self._GoogleAttrsCompare(dn, attrs):
+          logging.debug('UPDATE! existing dn=%s same GoogleUsername '
+            ' attrs differ.' % dn)
           mods.append(dn)
+        else:
+          logging.debug('SKIPPING! existing dn=%s same attrs ' % dn)
     return (adds, mods, renames)
 
   def _AnalyzeNewDN(self, dn_arg, attrs):
@@ -681,49 +717,61 @@ class UserDB(utils.Configurable):
       if dn:
         if self.db[dn]['GoogleUsername'] == attrs['GoogleUsername']:
           if self._GoogleAttrsCompare(dn, attrs):
+            logging.debug('UPDATE! dn=%s found by primary key, same '
+              'GoogleUsername attrs differ ' % dn)
             return 'updated'
           else:
+            logging.debug('SKIPPING dn=%s found by primary key, same '
+                'GoogleUsername attrs same ' % dn)
             return None
         else:
           meta_attr = 'meta-Google-old-username'
           self.db[dn][meta_attr] = self.db[dn]['GoogleUsername']
+          logging.debug('RENAME! dn=%s found by primary key, different '
+              ' GoogleUsername attrs same ' % dn)
           return 'renamed'
       else:
+        logging.debug('ADD! not in userdb dn=%s' % str(dn_arg))
         return 'added'
     else: # no primary key
+      logging.debug('ADD! new dn %s no primary key defined ' % dn)
       return 'added'
 
-  def FindDeletedUsers(self, new_db):
-    """ Use this after getting a complete list of users who pass
-    your filter; this will find the users in the database NOT in
+  def FindDeletedUsers(self, ldap_context):
+    """ Find the users in the database NOT in
     that list, which you'll presumably then mark for deletion from
     Google.
+
     Args:
-      new_db : output of LdapContext.Search or AsyncSearch (which
-        should be an unrestrictive search that finds all your
-        current users)
+      ldap_context : LdapContext
     Return:
-      list of DNs who are not in new_db
+      list of DNs who are not in ldap_users
     """
+    try:
+      ldap_users = ldap_context.Search(filter_arg=None, attrlist=[])
+    except RuntimeError,e:
+      logging.exception(str(e))
+      return
     deleted = []
-    old = new_db.UserDNs()
+    ldap_dns = ldap_users.UserDNs()
     for dn in self.UserDNs():
-      if dn not in old:
+      if dn not in ldap_dns:
+        logging.debug("%s is a deletion candidate self.db[dn]=" % 
+            str(self.db[dn]))
+        if 'meta-Google-action' in self.db[dn]:
+          if self.db[dn]['meta-Google-action'] == 'previously-exited':
+            logging.debug('Skipping exit.  Already exited %s' % dn)
+            continue
         deleted.append(dn)
     return deleted
 
-  def MergeUsers(self, other_db, timestamp=None):
+  def MergeUsers(self, other_db):
     """ Merge another UserDB into this one.
     Unlike _AddUsers, which takes the native data structure returned by
     the ldap module, this takes another instance of UserDB.
     Args:
       other_db: a second instance of UserDB.
-      timestamp: the value to assign to the 'meta-
     """
-    if timestamp is not None:
-      now = time.time()
-    else:
-      now = timestamp
     for (dn, attrs) in other_db.db.iteritems():
 
       # need to preserve meta-Google-old-username, if old name & it exists:
@@ -732,13 +780,34 @@ class UserDB(utils.Configurable):
       if dn in self.db:
         if 'meta-Google-old-username' in self.db[dn]:
           old_username = self.db[dn]['meta-Google-old-username']
+      else:
+        logging.debug("%s not in userdb.  Checking if it changed" % dn)
+        # Check if dn changed
+        if self.primary_key: 
+          dnInUserDb = self._FindPrimaryKey(attrs)
+          if dnInUserDb:
+            logging.debug("The dn found by primary key is %s" % str(dnInUserDb))
+            if dn != dnInUserDb:  
+              # it changed so delete the old dn to prevent adding a duplicate of
+              # the same user under a new dn (if you allow this then an exit 
+              # will be be performed on the old userdb entry when both the dn 
+              # and the username changes at the same time in ldap)
+              logging.debug('Replacing old userdb entry %s with %s' % 
+                  (dnInUserDb, dn))
+              old_username = self.db[dnInUserDb]['GoogleUsername']
+              self.DeleteUser(dnInUserDb)
       self.db[dn] = self._MapUser(attrs)
       self._UpdatePrimaryKeyLookup(dn, attrs)
-      self.SetMetaAttribute(dn, "meta-last-updated", now)
+      self.SetMetaAttribute(dn, "meta-last-updated", attrs[self.timestamp]) 
       if old_username is not None:
         self.db[dn]['meta-Google-old-username'] = old_username
       self._UpdateAttrList(attrs)
 
+  def __str__(self):
+    result = ''
+    for (dn, attrs) in self.db.iteritems():
+      result += 'userdb key %s contains attrs = %s\n' % (dn, str(attrs))
+    return result
 
   """
   ******************************************************************************
@@ -793,7 +862,7 @@ class UserDB(utils.Configurable):
     count = max(int(len(dns) * fraction),10)
     ldap_user_xform = user_transformation_rule.UserTransformationRule()
     callbacks = ldap_user_xform.Callbacks()
-    for i in xrange(count):
+    for unused_i in xrange(count):
       dn = dns[random.randrange(len(dns))]
       attrs = self.db[dn]
       copy_of_attrs = attrs.copy()
@@ -825,7 +894,6 @@ class UserDB(utils.Configurable):
        utf-8
     """
 
-    rejected_attrs = set()
     user_node = doc.createElement("user")
     dn_node = doc.createElement("DN")
     user_node.appendChild(dn_node)
@@ -845,11 +913,13 @@ class UserDB(utils.Configurable):
       try:
         u_value = unicode(text_value, 'utf-8')
       except UnicodeDecodeError:
-        rejected_attrs.add(attr)
+        attr_node.appendChild(doc.createTextNode("{base64}%s" % 
+            base64.b64encode(text_value)))
+        user_node.appendChild(attr_node)
         continue
       attr_node.appendChild(doc.createTextNode(u_value))
       user_node.appendChild(attr_node)
-    return (user_node, rejected_attrs)
+    return user_node
 
   def _ExtendListIfNecessary(self, lst, new_lst):
     """ Append the items in one list to the second, but only
@@ -881,7 +951,9 @@ class UserDB(utils.Configurable):
         if attr not in self.attrs:
           if attr not in self.mapping.keys(): # should not delete the Google*
                                               # attributes no matter what
-            del row[attr]
+            if attr not in self.meta_attrs:   # meta attrs exempt too
+              logging.debug('Not including attr %s' % attr)
+              del row[attr]
     self.db[dn] = row
     self._UpdateAttrList(row)
     if self.primary_key:
@@ -977,15 +1049,16 @@ class UserDB(utils.Configurable):
       return
     if elt.firstChild.nodeType != xml.dom.Node.TEXT_NODE:
       return # silently drop
-    user[str(elt.tagName)] = GetText(elt.childNodes)
+    value = GetText(elt.childNodes)
+    if value.find("{base64}") == 0:
+      value = base64.b64decode(value[8:])
+    user[str(elt.tagName)] = value
 
   def _WriteCSVFile(self, fname, dns):
     """ Write the users to an XML file
     Args;
       fname: name of the file to write
       dns: a list of DNs to be written out
-    Return:
-      set of attributes which couldn't be written out
     Raises:
       IOError: if the file couldn't be written
     """
@@ -1016,25 +1089,20 @@ class UserDB(utils.Configurable):
     Args:
       fname: name of the file to be written
       dns: the DNs to be written out
-    Return:
-      Set of attributes which could not be encoded into utf-8
     Raises:
       IOError: if the file couldn't be written
     """
 
-    rejected_attrs = set()
     doc = xml.dom.minidom.Document()
     top_node = doc.createElement("Users")
     doc.appendChild(top_node)
     for dn in dns:
       attrs = self.db[dn]
-      (domNode, bad_attrs) = self._CreateUserDOM(doc, dn, attrs)
-      rejected_attrs = rejected_attrs.union(bad_attrs)
+      domNode = self._CreateUserDOM(doc, dn, attrs)
       top_node.appendChild(domNode)
     f = codecs.open(fname, 'w', 'utf-8')
     f.write(doc.toprettyxml(encoding="utf-8"))
     f.close()
-    return rejected_attrs
 
   """
   *********************************************************************
@@ -1055,8 +1123,12 @@ class UserDB(utils.Configurable):
       now = time.time()
     else:
       now = timestamp
+    foundAny = False
     for user in ldap_users:
       dn, attrs = user
+      if dn == None:
+        continue
+      foundAny = True
       dn = dn.lower()
       self._UpdateAttrList(attrs)
       for (attr, val) in attrs.iteritems():
@@ -1068,6 +1140,8 @@ class UserDB(utils.Configurable):
 
       # set the meta-attributes
       self.SetMetaAttribute(dn, "meta-last-updated", now)
+    if not foundAny:
+      logging.warn(messages.MSG_EMPTY_LDAP_SEARCH_RESULT)
 
   def _DeletePrimaryKey(self, attrs):
     """ Delete the primary key found in 'attrs' from the primary key
@@ -1136,7 +1210,13 @@ class UserDB(utils.Configurable):
         if ldap_user_xform.MeetsPrereqs(attrs):
           copy_of_attrs.update(callback_mapping)
         try:
-          result[key] = eval(expr, copy_of_attrs).strip()
+          attr_val = eval(expr, copy_of_attrs)
+          if type(attr_val) is list:
+            attr_val = attr_val[0]         # attr_val retyped! and values 
+                                           # other than the 1st are ignored
+          else:
+            attr_val = str(attr_val)       # possible retyping
+          result[key] = attr_val.strip()
         except (NameError, SyntaxError):
           result[key] = None  # make sure it's got something
           pass
@@ -1212,9 +1292,6 @@ class UserDB(utils.Configurable):
     trial = set()  # our 'trial set'
     dictLower = {} # temporary lower-case version of trial
     for attr in self.attrs:
-      if attr in set(['objectGUID', 'msExchMailboxSecurityDescriptor',
-         'msExchMailboxGuid']):
-        continue
       attrLower = attr.lower()
       if exp.match(attrLower):
         trial.add(attr)
@@ -1234,3 +1311,18 @@ class UserDB(utils.Configurable):
       mapping["GoogleQuota"] = SuggestGoogleQuota(dictLower)
 
     return (trial, mapping)
+
+def _ConvertFromGuid(key):
+  return _GuidRange(key, 0, 15)
+
+def _GuidRange(key, start, end):
+  incr = 1
+  if start > end:
+    incr = -1
+  result = ""
+  for i in xrange(start, end + incr, incr):
+    result += '\\%s' % _GuidElement(key, i)
+  return result
+
+def _GuidElement(key, i):
+  return ('0%X' % ord(key[i]))[-2:]
