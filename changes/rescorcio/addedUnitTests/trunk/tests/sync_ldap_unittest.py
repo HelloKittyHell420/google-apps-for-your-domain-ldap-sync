@@ -108,7 +108,7 @@ class SyncLdapUnitTest(unittest.TestCase):
       dns: iterable list of DNs to delete
     """
     for dn in dns:
-      logging.debug("deleting in ldap user " + dn)
+      logging.debug("deleting in ldap user %s" % dn)
       self.ctxt.conn.delete_s(dn)
 
   def DisableUserLDAP(self, dn):
@@ -295,11 +295,10 @@ class SyncLdapUnitTest(unittest.TestCase):
     time.sleep(secs)
     logging.info('done waiting')
 
-
   def setUp(self):
     """ This unit test may want to use the same names over & over, so we need to
     start from a clean place.  So this setUp() deletes all the names under
-    OU=Unittest,DC=ent-qa-d2,DC=corp,DC=Google,DC=COM.
+    OU=Unittest,${LDAPDN}.
     Then it finds each ldif file in the test directory, and unique-ifies all
     the names, because when we delete a name from Dasher, we can't re-add it
     later.  It does the unique-ifying by adding in the date-time, to the
@@ -309,7 +308,6 @@ class SyncLdapUnitTest(unittest.TestCase):
     self.usernames_created = []
     self.tmppath = '/tmp/'
     self.api = None
-
 
     # only want to do this once, so suffixes will stay the same
     if not hasattr(self, 'suffix'):
@@ -324,13 +322,13 @@ class SyncLdapUnitTest(unittest.TestCase):
       logging.warn("api not initialized!")
     logging.debug("tearDown: about to start deleting test accounts")
     for username in self.usernames_created:
-      logging.debug("tearDown: deleting " + username);
+      logging.debug("tearDown: deleting %s" % username);
       try:
         self.api.DeleteAccount(username)
       except provisioning_errs.ObjectDoesNotExistError:
-        logging.debug("tearDown: deleting new" + username);
+        logging.debug("tearDown: deleting new%s" % username);
         try:
-          self.api.DeleteAccount("new" + username)
+          self.api.DeleteAccount("new%s" % username)
         except provisioning_errs.ObjectDoesNotExistError:
           continue
         continue
@@ -368,7 +366,7 @@ class SyncLdapUnitTest(unittest.TestCase):
 
     # now delete user
     dn = added_dns.pop()
-    logging.debug("deleting the old dn = " + dn)
+    logging.debug("deleting the old dn = %s" % dn)
     self.ctxt.conn.delete_s(dn)
     self.cmd.onecmd('updateUsers')
 
@@ -405,7 +403,7 @@ class SyncLdapUnitTest(unittest.TestCase):
 
     # now delete user in LDAP
     dn = added_dns.pop()
-    logging.debug("deleting the old dn = " + dn)
+    logging.debug("deleting the old dn = %s" % dn)
     self.ctxt.conn.delete_s(dn)
     self.cmd.onecmd('updateUsers')
 
@@ -423,7 +421,6 @@ class SyncLdapUnitTest(unittest.TestCase):
     attrs = self.userdb.LookupDN(dn)
     if 'meta-Google-action' in attrs:
       self.assertEqual(attrs['meta-Google-action'], 'previously-exited')
-
 
   def testingExitedUsersThatAreReAddedAreUnlockedInGoogleApps(self):
     """ Exited users that are subsequently re-added get their accounts unlocked.
@@ -444,7 +441,7 @@ class SyncLdapUnitTest(unittest.TestCase):
 
     # now delete user
     dn = added_dns.pop()
-    logging.debug("deleting the old dn = " + dn)
+    logging.debug("deleting the old dn = %s" % dn)
     self.ctxt.conn.delete_s(dn)
     self.cmd.onecmd('updateUsers')
 
@@ -469,7 +466,8 @@ class SyncLdapUnitTest(unittest.TestCase):
     self.assertLockStatus(attrs['GoogleUsername'], 'unlocked')
 
   def testingRenamesUsingCnAsUsernameIfCnIsPartOfDn(self):
-    """
+    """A rename that changes both username and dn results in GoogleUsername
+    rename.
     """
     self.verifyBasicConnectivity('dnrename.cfg')
 
@@ -497,11 +495,10 @@ class SyncLdapUnitTest(unittest.TestCase):
     # Because we cannot change the cn without doing an rdn move, fake it
     # by doing a delete and recreate of a user with the same primary_key
     dn = added_dns.pop()
-    logging.debug("deleting the old dn = " + dn)
+    logging.debug("deleting the old dn = %s" % dn)
     self.ctxt.conn.delete_s(dn)
     mods = self.ModUsersLDAP('dnrename.ldif', 'tuser', 1, 
-        suffix=self.suffix + '-B')
-    #mods = self.ModUsersLDAP('dnrename.ldif', 'tuser', 1)
+        suffix='%s-B' % self.suffix)
     self.cmd.onecmd('updateUsers')
 
     # write it out to a tempfile
@@ -511,13 +508,11 @@ class SyncLdapUnitTest(unittest.TestCase):
     self.cmd.onecmd('syncAllUsers')
 
     # check the users we just modded & be sure they were renamed
-    logging.debug("renamed users are " + str(mods))
+    logging.debug("renamed users are %s" % str(mods))
     for dn in mods:
       attrs = self.userdb.LookupDN(dn)
       logging.debug('attrs=%s' % str(attrs))
-
       self.assertMetaGoogleActionEmpty(attrs)
-
       self.assertAccountExists(attrs['GoogleUsername'])
 
   def testingRenamesWithObjectGUIDAsPrimaryKey(self):
@@ -574,7 +569,7 @@ class SyncLdapUnitTest(unittest.TestCase):
     self.cmd.onecmd('syncAllUsers')
  
     # make sure the delete was pushed to Google
-    logging.debug('--- searching google for deleted account ' + username)
+    logging.debug('--- searching google for deleted account %s' % username)
     self.assertLockStatus(username, 'locked')
 
   def assertLockStatus(self, username, status):
@@ -609,7 +604,7 @@ class SyncLdapUnitTest(unittest.TestCase):
     added_dns.update(self.ModUsersLDAP('userspecb.ldif', 'tuserb', 1))
     logging.debug(
         "testModificationTimeTimingUnderErrorForFirstLastNameRename:"
-        "added_dns=" + str(added_dns))
+        "added_dns=%s" % str(added_dns))
 
     # pull in the users via updateUsers command
     self.cmd.onecmd('updateUsers')
@@ -637,7 +632,7 @@ class SyncLdapUnitTest(unittest.TestCase):
 
     # create a condition where the second user fails in syncAllUsers
     dn_to_change = to_be_changed.pop()
-    logging.debug("dn_to_change: " + dn_to_change)
+    logging.debug("dn_to_change: %s" % dn_to_change)
     attr_values = self.userdb.LookupDN(dn_to_change)
     changed_username = attr_values["GoogleUsername"]
     self.userdb.db[dn_to_change]["GoogleUsername"] = "tuser-hidden"
@@ -654,12 +649,12 @@ class SyncLdapUnitTest(unittest.TestCase):
     self.userdb.db[dn_to_change]["GoogleUsername"] = changed_username
     
     # do a sync to Google.  The second user should be handled.  If not it is
-    # a problem with the tool
+    # a problem with tracking last modified time
     self.cmd.onecmd('syncAllUsers')
 
     # verify that Google got both changes
     for dn in mods:
-      logging.debug("checking dn = " + dn)
+      logging.debug("checking dn = %s" % dn)
       attrs = self.userdb.LookupDN(dn)
 
       # syncAllUsers should have nulled-out the meta-Google-action field
@@ -911,7 +906,7 @@ class SyncLdapUnitTest(unittest.TestCase):
 
 def _LogObjectValue(message, value):
   pp = pprint.PrettyPrinter()
-  logging.debug(message + pp.pformat(value))
+  logging.debug('%s %s' % (message, pp.pformat(value)))
 
 
 def main():
