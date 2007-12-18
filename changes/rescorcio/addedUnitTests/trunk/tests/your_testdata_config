@@ -1,4 +1,4 @@
-s/${LDAPSERVER}/ldap.yourdomain.com/
+s/${LDAPSERVER}/active_directory.yourdomain.com/
 s/${LDAPFILTER}/(\&(objectClass=organizationalPerson)(userAccountControl:1.2.840.113556.1.4.804:=512))/
 s/${LDAPADMIN}/CN=ad-admin,CN=Users,${LDAPDN},DC=COM/
 s/${LDAPDISABLEDFILTER}/(\&(objectClass=organizationalPerson)(badPwdCount>=1))/
@@ -9,3 +9,8 @@ s/${GOOGLEADMIN}/agent-name@${DOMAIN}/
 s/${DOMAIN}/yourdomain.com/
 s/${LDAPDN}/DC=yourdomain/
 s/${QUOTA}/2048/
+s/${OPENLDAPSERVER}/openldap.yourdomain.com/
+s/${OPENLDAPFILTER}/(objectClass=person)/
+s/${OPENLDAPDN}/DC=yourdomain/
+s/${OPENLDAPADMINNAME}//
+s/${OPENLDAPADMINPASSWORD}//

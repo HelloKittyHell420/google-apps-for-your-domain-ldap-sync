@@ -49,11 +49,6 @@ from src import ldap_ctxt
 from src import commands
 from src import sync_ldap
 
-#keep_attrs = set(['name', 'objectClass', 'distinguishedName',
-                  #'cn', 'givenName', 'sn', 'mail', 'mailNickname',
-                  #'displayName'])
-
-
 ###############################################################################
 
 class ModlistFromLDIF(ldif.LDIFParser):
@@ -119,8 +114,7 @@ class SyncLdapUnitTest(unittest.TestCase):
     """
     dn = dn.lower()
     query = '(distinguishedName=%s)' % dn
-    users = self.ctxt.Search(filter_arg=query,
-                                  attrlist=['userAccountControl'])
+    users = self.ctxt.Search(filter_arg=query, attrlist=['userAccountControl'])
     if not users or len(users) == 0:
       self.fail('failed to lookup %s' % dn)
     acct = int(users.db[dn]['userAccountControl'])
@@ -134,8 +128,11 @@ class SyncLdapUnitTest(unittest.TestCase):
     Args:
       query: LDAP search filter defining the users to be removed
     """
+    saved = self.ctxt.ldap_page_size
+    self.ctxt.ldap_page_size = 1000   # in case there are a lot of leftovers
     dns = self.ctxt.Search(filter_arg=query, attrlist=[])
     self.DeleteUsersLDAP(dns.db)
+    self.ctxt.ldap_page_size = saved  # change back to previous value
 
   def MultiplyUser(self, dn, modlist, base, multiple=1, suffix=None):
     """ for a given dn/modlist, "multiply" it, and add a (presumably
@@ -180,6 +177,7 @@ class SyncLdapUnitTest(unittest.TestCase):
     Return:
       set of dns of the users added
     """
+    logging.debug('ModUsersLDAP: multple=%s' % multiple) # TODO: remove
     fname = os.path.join(self.datapath, ldif_name)
     f = open(fname, 'r')
     parser = ModlistFromLDIF(f)
@@ -212,11 +210,11 @@ class SyncLdapUnitTest(unittest.TestCase):
     f.close()
     return changes
 
-  def InitWithCfg(self, cfg_name, sync=False):
+  def InitWithCfg(self, cfg_name, init_api=False):
     """ for a given config file name, do all the setup
     Args:
       cfg_name: name of config file
-      sync: boolean for whether to sync with Google or not.
+      init_api: boolean for whether to initialize the provisioning api or not.
     """
     self.cname = os.path.join(self.datapath, cfg_name)
     if not os.path.exists(self.cname):
@@ -233,7 +231,7 @@ class SyncLdapUnitTest(unittest.TestCase):
 
     # we need our own instance of provisioning.API, so we can check
     # that things actually got done
-    if sync:
+    if init_api:
       self.admin = self.cfg.GetAttr('admin')
       self.domain = self.cfg.GetAttr('domain')
       self.password = self.cfg.GetAttr('password')
@@ -276,7 +274,7 @@ class SyncLdapUnitTest(unittest.TestCase):
     self.assertNotEqual(gattrs, None)
 
   def GetTempFile(self, test, phase, extension):
-    """ Get the name of a tempfile to use, given the testing environment's
+    """ Get the name of a tempfile to use, given the test environment's
     preferences for use of temp files.
     Args:
       test: name of the test, e.g. 'basic'
@@ -308,6 +306,7 @@ class SyncLdapUnitTest(unittest.TestCase):
     self.usernames_created = []
     self.tmppath = '/tmp/'
     self.api = None
+    self.skip_deleting_test_accounts = False
 
     # only want to do this once, so suffixes will stay the same
     if not hasattr(self, 'suffix'):
@@ -320,6 +319,9 @@ class SyncLdapUnitTest(unittest.TestCase):
       self.ctxt = None
     if not self.api: 
       logging.warn("api not initialized!")
+      return
+    if self.skip_deleting_test_accounts:
+      return
     logging.debug("tearDown: about to start deleting test accounts")
     for username in self.usernames_created:
       logging.debug("tearDown: deleting %s" % username);
@@ -335,11 +337,33 @@ class SyncLdapUnitTest(unittest.TestCase):
 
     self.users = None
 
-  def testingAddsUpdatesAndRenamesWithNoPrimaryKey(self):
-    """ Adds, updates and renames work on a CFG file with no primary key.
+  def testingOpenLdapNonPaging(self):
+    """ Directories that don't require paging can retrieve more than 1000 users.
     """
+    logging.debug('testOpenLdapNonPaging: **********')
+    self.InitWithCfg('openldap.cfg', False)
+    found = self.ctxt.Search(attrlist=[], sizelimit=1002)
+    self.assertTrue(len(found.UserDNs()) >= 1001)
+
+  def testingAddsUpdatesAndRenamesWithNoPrimaryKey(self):
+    """ Adds, updates and renames work on a CFG file with no primary key.  """
     logging.debug("testAddsUpdatesAndRenamesWithNoPrimaryKey: **********")
     self.verifyAddsUpdatesRenames('yourdomain.cfg')
+
+  def oktestLdapPagingForAddsModsAndRenames(self):
+    """ Paging of LDAP results works for adds, renames, and updates.  """
+    logging.debug("testLdapPagingForAddsModsAndRenames: **********")
+    # The following tests adds, updates, and renames page properly
+    # because ldap_page_size is 2 in paging.cfg.
+    self.verifyAddsUpdatesRenames('paging.cfg', usersadded=4, usersmoded=3)
+
+  def oktestLdapPagingWorksOnAdFor1001Users(self):
+    """ Paging of LDAP results works for the 1002 user case.  """
+    logging.debug("testLdapPagingWorksOnAdFor1002Users: **********")
+    self.skip_deleting_test_accounts = True
+    # The following tests added users page properly
+    # because ldap_page_size is 1000 in paging1000.cfg.
+    self.verifyAddedUsersShowUpInUserDb('paging1000.cfg', usersadded=1002)
 
   def testingAddsUpdatesAndRenamesWithPrimaryKey(self):
     """ Adds, updates and renames work on a CFG file with a primary key.
@@ -385,8 +409,7 @@ class SyncLdapUnitTest(unittest.TestCase):
     self.assertEquals(attrs['meta-Google-action'], 'previously-exited')
 
   def testingExitedUsersThatAreReExitedResultInNoError(self):
-    """ Exited users that are subsequently re-exited produce no error.
-    """
+    """ Exited users that are subsequently re-exited produce no error.  """
     self.verifyBasicConnectivity('yourdomain.cfg')
 
     # add one user to the directory
@@ -666,16 +689,12 @@ class SyncLdapUnitTest(unittest.TestCase):
       self.assertNotEqual(gattrs, None)
       self.assertEqual(str(gattrs['firstName']), attrs['GoogleFirstName'])
 
-  def verifyAddsUpdatesRenames(self, file, ldifbasename='userspec'):
+  def verifyAddedUsersShowUpInUserDb(self, file, ldifbasename='userspec',
+      usersadded=2):
     self.verifyBasicConnectivity(file)
 
     # add some users to the directory
-    added_dns = self.ModUsersLDAP('%s.ldif' % ldifbasename, 'tuser', 2)
-
-    # unfortunately, AD will change this account, anywhere up to 30 seconds
-    # later, and we really need things to stabilize for the time-based
-    # filter to work.  So:
-    self.WaitForAD(30)
+    added_dns = self.ModUsersLDAP('%s.ldif' % ldifbasename, 'tuser', usersadded)
 
     # pull in the users via updateUsers command
     self.cmd.onecmd('updateUsers')
@@ -689,6 +708,18 @@ class SyncLdapUnitTest(unittest.TestCase):
     self._assertSetEmpty(added_not_in_userdb)
     self._assertSetEmpty(userdb_not_in_added)
 
+    return added_dns
+
+  def verifyAddsUpdatesRenames(self, file, ldifbasename='userspec', 
+      usersadded=2, usersmoded=1):
+    added_dns = self.verifyAddedUsersShowUpInUserDb(file, ldifbasename, 
+        usersadded)
+
+    # unfortunately, AD will change this account, anywhere up to 30 seconds
+    # later, and we really need things to stabilize for the time-based
+    # filter to work.  So:
+    self.WaitForAD(30)
+
     # do the sync to Google
     self.cmd.onecmd('syncAllUsers')
     self.VerifyUsersInGoogle(added_dns)
@@ -696,7 +727,7 @@ class SyncLdapUnitTest(unittest.TestCase):
     # now modify some of them, and make sure those get flagged properly
 
     time.sleep(2)  # so as to detect a time difference in whenChanged!
-    mods = self.ModUsersLDAP('%s-mod.ldif' % ldifbasename, 'tuser', 1, 
+    mods = self.ModUsersLDAP('%s-mod.ldif' % ldifbasename, 'tuser', usersmoded, 
         ldap.MOD_REPLACE)
 
     self.cmd.onecmd('updateUsers')
@@ -722,8 +753,8 @@ class SyncLdapUnitTest(unittest.TestCase):
 
     # now force a rename:
     time.sleep(2)  # so as to detect a time difference in whenChanged!
-    mods = self.ModUsersLDAP('%s-rename.ldif' % ldifbasename, 'tuser', 1,
-                             ldap.MOD_REPLACE)
+    mods = self.ModUsersLDAP('%s-rename.ldif' % ldifbasename, 'tuser', 
+        usersmoded, ldap.MOD_REPLACE)
     self.cmd.onecmd('updateUsers')
 
     # do the sync to Google
@@ -739,7 +770,6 @@ class SyncLdapUnitTest(unittest.TestCase):
 
       # syncAllUsers should have nulled-out the meta-Google-action field
       self.assertMetaGoogleActionEmpty(attrs)
-
       self.assertAccountExists(attrs['GoogleUsername'])
 
 

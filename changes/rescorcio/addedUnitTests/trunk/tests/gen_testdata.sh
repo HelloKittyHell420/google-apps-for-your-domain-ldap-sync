@@ -24,6 +24,7 @@ done
 echo "$expressions"
 pushd testsourcedata
 set -x
+mkdir -p ../testdata
 for file in *
 do
   sed $expressions < $file > ../testdata/$file
