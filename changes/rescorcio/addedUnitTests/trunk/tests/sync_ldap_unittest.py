@@ -239,7 +239,6 @@ class SyncLdapUnitTest(unittest.TestCase):
       self.api = provisioning.API(self.admin, self.password, self.domain)
 
   def CompareUserdbToTarget(self, target):
-
     """ Check that the UserDB contains exactly the DNs
     passed in, and nothing else
     Args;
@@ -334,7 +333,6 @@ class SyncLdapUnitTest(unittest.TestCase):
         except provisioning_errs.ObjectDoesNotExistError:
           continue
         continue
-
     self.users = None
 
   def testingOpenLdapNonPaging(self):
@@ -350,14 +348,14 @@ class SyncLdapUnitTest(unittest.TestCase):
     logging.debug("testAddsUpdatesAndRenamesWithNoPrimaryKey: **********")
     self.verifyAddsUpdatesRenames('yourdomain.cfg')
 
-  def oktestLdapPagingForAddsModsAndRenames(self):
+  def testingLdapPagingForAddsModsAndRenames(self):
     """ Paging of LDAP results works for adds, renames, and updates.  """
     logging.debug("testLdapPagingForAddsModsAndRenames: **********")
     # The following tests adds, updates, and renames page properly
     # because ldap_page_size is 2 in paging.cfg.
     self.verifyAddsUpdatesRenames('paging.cfg', usersadded=4, usersmoded=3)
 
-  def oktestLdapPagingWorksOnAdFor1001Users(self):
+  def testingLdapPagingWorksOnAdFor1001Users(self):
     """ Paging of LDAP results works for the 1002 user case.  """
     logging.debug("testLdapPagingWorksOnAdFor1002Users: **********")
     self.skip_deleting_test_accounts = True
@@ -410,6 +408,7 @@ class SyncLdapUnitTest(unittest.TestCase):
 
   def testingExitedUsersThatAreReExitedResultInNoError(self):
     """ Exited users that are subsequently re-exited produce no error.  """
+    logging.debug("testExitedUsersThatAreReExitedResultInNoError: **********")
     self.verifyBasicConnectivity('yourdomain.cfg')
 
     # add one user to the directory
@@ -448,6 +447,8 @@ class SyncLdapUnitTest(unittest.TestCase):
   def testingExitedUsersThatAreReAddedAreUnlockedInGoogleApps(self):
     """ Exited users that are subsequently re-added get their accounts unlocked.
     """
+    logging.debug(
+        "testExitedUsersThatAreReAddedAreUnlockedInGoogleApps: **********")
     self.verifyBasicConnectivity('yourdomain.cfg')
 
     # add one user to the directory
@@ -492,6 +493,7 @@ class SyncLdapUnitTest(unittest.TestCase):
     """A rename that changes both username and dn results in GoogleUsername
     rename.
     """
+    logging.debug("testRenamesUsingCnAsUsernameIfCnIsPartOfDn: **********")
     self.verifyBasicConnectivity('dnrename.cfg')
 
     # add one user to the directory
@@ -602,7 +604,6 @@ class SyncLdapUnitTest(unittest.TestCase):
   def verifyBasicConnectivity(self, file):
     """ test that connecting to ldap works 
     """
-
     self.InitWithCfg(file, True)
 
     # clean out all the DNs currently in this branch of the tree
@@ -707,7 +708,6 @@ class SyncLdapUnitTest(unittest.TestCase):
       self.CompareUserdbToTarget(added_dns))
     self._assertSetEmpty(added_not_in_userdb)
     self._assertSetEmpty(userdb_not_in_added)
-
     return added_dns
 
   def verifyAddsUpdatesRenames(self, file, ldifbasename='userspec', 
@@ -725,11 +725,9 @@ class SyncLdapUnitTest(unittest.TestCase):
     self.VerifyUsersInGoogle(added_dns)
 
     # now modify some of them, and make sure those get flagged properly
-
     time.sleep(2)  # so as to detect a time difference in whenChanged!
     mods = self.ModUsersLDAP('%s-mod.ldif' % ldifbasename, 'tuser', usersmoded, 
         ldap.MOD_REPLACE)
-
     self.cmd.onecmd('updateUsers')
 
     # write it out to a tempfile
