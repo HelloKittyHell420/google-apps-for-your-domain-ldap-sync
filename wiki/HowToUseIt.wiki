@@ -320,7 +320,13 @@ tls_cacertdir
 tls_cacertfile
 }}}
 
-(the naming could be tweaked a little.  In particular, I intend to change 'admin' to 'google_admin' and similarly for 'domain', 'password', and 'max_threads', since those only apply to talking to Google Apps for Your Domain.)
+To get a comprehensive description of these parameters type
+
+{{{
+set
+}}}
+
+at the "Command:" prompt within the tool.
 
 Here is an example of the config file:
 
@@ -353,7 +359,10 @@ These are, hopefully, pretty well explained just by their names:
   * Timeout for talking to the LDAP server (ldap_timeout)
   * Filter for an employee who should be added to GAFYD (ldap_user_filter)
   * Filter for an employee who has exited the company or otherwise become ineligible for GAFYD (ldap_disabled_filter)
-
+  * Retrieve n results from the ldap server at a time (ldap_page_size).  This is required by directories like Active Directory which by default have a server-side limit of 1000 results per page.  If your directory does not need this you can leave this at the default of 0.
+  * Require TLS negotiation for connecting to ldap (tls_option)
+  * Location of the Certificate Authority certificate file directory (tls_cacertdir)
+  * Specify a specific Certificate Authority certificate file (tls_cacertfile)
 
 The ldap_disabled_filter in particular is optional.  It's intended for environments where former employees are kept in the directory but one of their variables is changed to reflect their employment status.  If there is no ldap_disabled_filter, exited employees are assumed to be deleted, and discovered by their absence in a scan.
 Google config variables
@@ -372,6 +381,8 @@ Some of these could equally well be considered "LDAP variables", I suppose, but 
   * mapping:  the mapping from LDAP attributes to the GAFYD variables that are ultimately pushed to Google. 
   * primary_key:  (optional)  If supplied, this is the LDAP attribute of a user that never changes, even if the employee gets married, divorced, and changes every possible other attribute including "distinguishedName".  An example would be the "uid" or "employeeNumber" attribute.  The primary_key is helpful in finding users whose GoogleUsername must change;  without it, they may be incorrectly treated as an exit and a new hire.
   * timestamp: the LDAP attribute which is used on your system to record when a record was last changed.  This is critical since it's the way the Tool does the "Steady State" operation shown above.  Note the line "(&(objectclass=organizationalPerson)(modifyTimestamp>=20061101185255.0Z))" "modifyTimestamp" is the timestamp variable here.
+
+NOTE: there are differences in the way the filter string above is constructed based on the type of ldap directory being accessed.  This is due to slight differences in handling the format of the modifyTimestamp.  At the moment the tool tries to guess whether Active Directory is being accessed and formats the query string appropriately.  It uses the presence of the sAMAccountName field in your "attrs" config variable as an indicator that Active Directory is being accessed.  For more details about these slight differences, see the _AndUpdateTime() method in commands.py.
 
 Also you may want to restrict the types of operations allowed by the sync.  Specifically the google_operations variable setting below will restrict changes to updates only.
 
