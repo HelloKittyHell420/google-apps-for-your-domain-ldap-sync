@@ -3,8 +3,8 @@
 = Introduction =
 This is for developers interested in enhancing the code in the project for their purposes.  Also, for developers who want to submit code back to the project, 
 
-1. running existing unit tests successfully AND
-2. submitring additional unit tests that cover all code changes
+#. running existing unit tests successfully AND
+#. submitring additional unit tests that cover all code changes
 
 is required (although usually not by itself sufficient) to have a code submission accepted.
 
