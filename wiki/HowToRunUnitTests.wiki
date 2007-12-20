@@ -21,4 +21,8 @@ To setup for the test
 
 This should produce a folder called tests/testdata/.  If you did everything correctly there should be no dollar-signs ($) in any file in tests/testdata.
 
-Then you can run python sync_ldap_unittest.py
+Then you can run 
+
+{{{
+python sync_ldap_unittest.py
+}}}
