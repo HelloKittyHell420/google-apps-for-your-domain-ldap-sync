@@ -177,7 +177,6 @@ class SyncLdapUnitTest(unittest.TestCase):
     Return:
       set of dns of the users added
     """
-    logging.debug('ModUsersLDAP: multple=%s' % multiple) # TODO: remove
     fname = os.path.join(self.datapath, ldif_name)
     f = open(fname, 'r')
     parser = ModlistFromLDIF(f)
@@ -828,7 +827,6 @@ class SyncLdapUnitTest(unittest.TestCase):
       self.fail()
     if 'meta-Google-action' in attrs:
       self.assertTrue(not attrs['meta-Google-action'])
-    # TODO(rescorcio): come back to this.  This used to check for not 'exited'
 
   def testingNoExceptions(self):
     """ Try lots of misuses of the tool, and be sure exceptions are caught.
