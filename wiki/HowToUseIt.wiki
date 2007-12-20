@@ -307,6 +307,7 @@ ldap_port
 ldap_root_dn
 ldap_timeout
 ldap_user_filter
+ldap_page_size
 logfile
 loglevel
 mapping
@@ -314,6 +315,9 @@ max_threads
 password
 primary_key
 timestamp
+tls_option
+tls_cacertdir
+tls_cacertfile
 }}}
 
 (the naming could be tweaked a little.  In particular, I intend to change 'admin' to 'google_admin' and similarly for 'domain', 'password', and 'max_threads', since those only apply to talking to Google Apps for Your Domain.)
