@@ -25,6 +25,7 @@ class LdapContext:  class that encapsulates all LDAP info
 
 
 import ldap
+from ldap.controls import SimplePagedResultsControl
 import logging
 import messages
 import time
@@ -53,6 +54,7 @@ class LdapContext(utils.Configurable):
                   'ldap_disabled_filter': messages.MSG_LDAP_DISABLED_FILTER,
                   'ldap_base_dn': messages.MSG_LDAP_BASE_DN,
                   'ldap_timeout': messages.MSG_LDAP_TIMEOUT,
+                  'ldap_page_size': messages.MSG_LDAP_PAGE_SIZE,
                   'tls_option': messages.MSG_TLS_OPTION,
                   'tls_cacertdir': messages.MSG_TLS_CACERTDIR,
                   'tls_cacertfile': messages.MSG_TLS_CACERTFILE}
@@ -70,6 +72,7 @@ class LdapContext(utils.Configurable):
     self.ldap_base_dn = None
     self.ldap_timeout = TIMEOUT_SECS
     self.ldap_url = None
+    self.ldap_page_size = 0
     self.tls_option = 'never'
     self.tls_cacertdir = '/etc/ssl/certs'
     self.tls_cacertfile = ''
@@ -132,6 +135,7 @@ class LdapContext(utils.Configurable):
     try:
       self._config.TestConfig(self, ['ldap_url'])
       self.conn = ldap.initialize(self.ldap_url)
+      self.protocol_version = 3
       self.conn.bind_s(self.ldap_admin_name, self.ldap_password,
         ldap.AUTH_SIMPLE)
       return None
@@ -191,23 +195,39 @@ class LdapContext(utils.Configurable):
       raise utils.ConfigError(['ldap_user_filter'])
     if not self.conn:
       raise RuntimeError('Not connected')
+    self.conn.network_timeout = self.ldap_timeout
     try:
-      logging.debug('Async search on %s\n\tfor%s\n\twith %s' % 
-          (self.ldap_base_dn, query, str(attrlist)))
-      msgid = self.conn.search_ext(self.ldap_base_dn, ldap.SCOPE_SUBTREE, 
-                                   query, attrlist=attrlist)
-      u = []
-      for ix in range(sizelimit):
-        ix += 1
-        time.sleep(SLEEP_TIME)
-        res = self.conn.result(msgid=msgid, all=0, timeout=self.ldap_timeout)
-        code, l = res
-        if len(l):
-          u.append(l[0])
-          if len(u) >= sizelimit:
-            u = u[:sizelimit]
+      paged_results_control = SimplePagedResultsControl(
+          ldap.LDAP_CONTROL_PAGE_OID, True, (self.ldap_page_size, ''))
+      logging.debug('Search on %s for %s' % (self.ldap_base_dn, query))
+      users = []
+      ix = 0
+      while True: 
+        if self.ldap_page_size == 0:
+          serverctrls = []
+        else:
+          serverctrls = [paged_results_control]
+        msgid = self.conn.search_ext(self.ldap_base_dn, ldap.SCOPE_SUBTREE, 
+            query, attrlist=attrlist, serverctrls=serverctrls)
+        res = self.conn.result3(msgid=msgid, timeout=self.ldap_timeout)
+        unused_code, results, unused_msgid, serverctrls = res
+        for result in results:
+          ix += 1
+          users.append(result)
+          if sizelimit > 0 and ix >= sizelimit:
             break
-      if not u:
+        if sizelimit > 0 and ix >= sizelimit:
+          break
+        cookie = None 
+        for serverctrl in serverctrls:
+          if serverctrl.controlType == ldap.LDAP_CONTROL_PAGE_OID:
+            unused_est, cookie = serverctrl.controlValue
+            if cookie:
+              paged_results_control.controlValue = (self.ldap_page_size, cookie)
+            break
+        if not cookie:
+          break
+      if not users:
         logging.warn(messages.MSG_EMPTY_LDAP_SEARCH_RESULT)
     except ldap.INSUFFICIENT_ACCESS, e:
       logging.exception('User %s lacks permission to do this search\n%s' %
@@ -216,7 +236,7 @@ class LdapContext(utils.Configurable):
     except ldap.LDAPError, e:
       logging.exception('LDAP error searching %s: %s' % (query, str(e)))
       return None
-    return userdb.UserDB(config=self._config, users=u)
+    return userdb.UserDB(config=self._config, users=users)
 
   def Search(self, filter_arg=None, sizelimit=0, attrlist=None):
     """ Given the configured user search filter, return the list
@@ -233,33 +253,9 @@ class LdapContext(utils.Configurable):
       utils.ConfigError: if any required config items are not present
       RuntimeError:  if not connected
     """
-    self._config.TestConfig(self, self._required_config)
-    if not self.conn:
-      raise RuntimeError('Not connected')
-    query = filter_arg
-    if not query:
-      query = self.ldap_user_filter
-    if not query:
-      raise utils.ConfigError(['ldap_user_filter'])
-    self.conn.network_timeout = self.ldap_timeout
     try:
-      if sizelimit:
-        u = self.AsyncSearch(query, sizelimit, attrlist=attrlist)
-        return u
-      else:
-        logging.debug('searching in %s for query %s attrs=%s' %
-                      (self.ldap_base_dn, query, str(attrlist)))
-        u = self.conn.search_ext_s(self.ldap_base_dn, ldap.SCOPE_SUBTREE, 
-                                   query, attrlist=attrlist, 
-                                   timeout=self.ldap_timeout)
-        if not u:
-          logging.warn(messages.MSG_EMPTY_LDAP_SEARCH_RESULT)
-        return userdb.UserDB(config=self._config, users=u)
-    except ldap.INSUFFICIENT_ACCESS, e:
-      logging.exception('User %s lacks permission to do this search\n%s' %
-                        (self.ldap_admin_name, str(e)))
+      return self.AsyncSearch(filter_arg, sizelimit, attrlist=attrlist)
     except ldap.SIZELIMIT_EXCEEDED, e:
-      logging.exception('Size limit exceeded on your server:\n%s' % str(e))
-    except ldap.LDAPError, e:
-      logging.exception('LDAP error searching query=%s: %s' % (query, str(e)))
+      logging.exception('Size limit exceeded on your server.  '
+                        'Try setting ldap_page_size.  %s' % str(e))
     return None

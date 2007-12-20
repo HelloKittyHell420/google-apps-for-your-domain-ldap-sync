@@ -157,6 +157,12 @@ MSG_LDAP_PASSWORD = "Password for the LDAP server."
 
 MSG_LDAP_URL = "URL for your LDAP server."
 
+MSG_LDAP_PAGE_SIZE = """Some ldap servers (like Active Directory) will return 
+only a limited number of responses to a query and require the ldap client 
+to request more on subsequent requests.  If you have such a server, set this to
+a positive integer.  If your ldap server does not require paging leave this at
+the default value of 0."""
+
 MSG_LDAP_USER_FILTER = """Filter expression for your LDAP server which
 returns your active users. Examples:
 (objectclass=organizationalPerson)
