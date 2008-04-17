@@ -58,7 +58,7 @@ have changed in LDAP, and marked them for updating in Google
 Apps for Your Domain.
 }}}
 
-Here you need to set several variables to indicate how to login administratively to dasher
+Here you need to set several variables to indicate how to login administratively to Google Apps
 
 {{{
      set admin domain-admin@yourdomain.com
@@ -244,7 +244,7 @@ The DATA_FILE need not be given, but if it is, the user database is populated fr
 
 ===LDAP details===
 
-The tool does not assume that the LDAP server is ActiveDirectory, OpenLdap, or any other product, and thus it doesn't know a priori what attributes should be used to derive required Google attributes.  Furthermore, LDAP directories often have many attributes which are of no conceivable use for Dasher provisioning, and which can be large and not even ASCII text, e.g. JPEG images, Microsoft security descriptors, etc.  Since the Tool just uses a Python dictionary for its storage rather than something more scaleable, it's desirable to not maintain more data than absolutely necessary for Google provisioning.  For this reason, a fair number of commands are aimed at discovering and managing the set of attributes to be maintained by the tool, and "mapping" (explained below) LDAP attributes to Google attributes.   This was illustrated in the Standing Start example above.
+The tool does not assume that the LDAP server is ActiveDirectory, OpenLdap, or any other product, and thus it doesn't know a priori what attributes should be used to derive required Google attributes.  Furthermore, LDAP directories often have many attributes which are of no conceivable use for Google Apps provisioning, and which can be large and not even ASCII text, e.g. JPEG images, Microsoft security descriptors, etc.  Since the Tool just uses a Python dictionary for its storage rather than something more scaleable, it's desirable to not maintain more data than absolutely necessary for Google provisioning.  For this reason, a fair number of commands are aimed at discovering and managing the set of attributes to be maintained by the tool, and "mapping" (explained below) LDAP attributes to Google attributes.   This was illustrated in the Standing Start example above.
 Although the admin can always use  some other tool to read in the XML or CSV file and assign Google attributes in a way that makes sense to him/her, the tool can also take mappings of one or more LDAP attributes to Google attributes.  This mapping is actually a general Python expression, as the GoogleUsername illustrates.  An example of this mapping is shown in the Standing Start section: 
 
   * GoogleLastName comes from the 'sn' (for 'surname') attribute.
