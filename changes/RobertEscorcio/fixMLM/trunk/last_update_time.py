@@ -68,7 +68,7 @@ def get():
   return time
 
 def beginNewRun():
-  """ Reset error boolean and note the time the run began.
+  """ Reset error boolean and note the time the run began as the 'baseline'.
   If an error occurs
   then updateIfNoErrors() will ignore requests to update last update
   time."""
@@ -98,3 +98,7 @@ def updateIfNoErrors():
         str(NEXT_UPDATE_TIME))
     _set(NEXT_UPDATE_TIME)
 
+def GetBaseline():
+  """ Return the time that the new run started which is known as the 'baeline'.
+  """
+  return time.strftime('%Y%m%d%H%M%S', NEXT_UPDATE_TIME)

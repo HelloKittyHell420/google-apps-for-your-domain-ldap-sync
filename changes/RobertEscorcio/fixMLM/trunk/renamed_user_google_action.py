@@ -19,7 +19,6 @@
 needs to change.)
 
   RenamedUserGoogleAction: the class implementing the default action
-** Consult <TBD> for overall documentation on this package.
 """
 
 import google_action
@@ -64,8 +63,7 @@ class RenamedUserGoogleAction(google_action.GoogleAction):
       logging.debug('renamed %s to %s' % (
         self.attrs['meta-Google-old-username'], self.attrs['GoogleUsername']))
       self._thread_stats.IncrementStat('renames', 1)
-      self._result_queue.PutResult(self.dn, 'renamed', None, 
-          self.attrs['GoogleUsername'])
+      self._result_queue.PutResult(self.dn, 'renamed', None, self.attrs)
     except provisioning_errs.ProvisioningApiError, e:
       # report failure
       logging.error('error: %s' % str(e))

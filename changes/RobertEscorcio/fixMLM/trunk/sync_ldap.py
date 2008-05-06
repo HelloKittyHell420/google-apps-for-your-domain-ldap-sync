@@ -44,12 +44,17 @@ import commands
 import sync_google
 import userdb
 import utils
+from google.appsforyourdomain import provisioning
 
 
-def SetupMain(options):
-
+def SetupMain(options, api=provisioning):
   """ This is called from the unit test, since it doesn't go into
   reading from the keyboard
+
+  Args:
+    options: command line options as if returned from optparse
+    api: The apps provisioning api to use.  This is primarily needed to inject
+         a mock api for testing.
   """
   parms = {}
   parms.update(ldap_ctxt.LdapContext.config_parms)
@@ -67,7 +72,7 @@ def SetupMain(options):
 
   ldap_context = ldap_ctxt.LdapContext(config)
   user_database = userdb.UserDB(config)
-  google_context = sync_google.SyncGoogle(user_database, config)
+  google_context = sync_google.SyncGoogle(user_database, config, api=api)
 
   if options.data_file:
     user_database.ReadDataFile(options.data_file)

@@ -67,13 +67,13 @@ class ExitedUserGoogleAction(google_action.GoogleAction):
       # report success
       logging.debug('locked %s' % self.attrs['GoogleUsername'])
       self._thread_stats.IncrementStat('exits', 1)
-      self._result_queue.PutResult(self.dn, 'exited')
+      self._result_queue.PutResult(self.dn, 'exited', None, attrs)
     except provisioning_errs.ProvisioningApiError, e:
-      # TODO(rescorcio): revisit
-      if str(e).find('InvalidEmailException') >= 0:
-        # trying to exit a user that has already been deleted is not an error
+      if (str(e).find('InvalidEmailException') >= 0 or
+          str(e).find('Object does not exist') >= 0):
+        # trying to exit a user that does not exist is not an error
         logging.warn(messages.MSG_EXIT_EXITED_USER % dn)
-        self._result_queue.PutResult(self.dn, 'exited')
+        self._result_queue.PutResult(self.dn, 'exited', None, attrs)
         return
       # report failure
       logging.error('error: %s' % str(e))
