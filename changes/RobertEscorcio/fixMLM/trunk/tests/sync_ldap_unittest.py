@@ -438,8 +438,7 @@ class SyncLdapUnitTest(unittest.TestCase):
   def testAttributesInvaldatedOnError(self):
     """ When an error occurs meta-last-updated is unset to indicate attributes
     do not reflect what is in google apps"""
-    logging.debug(
-        "testAttributesInvaldatedOnError*******")
+    logging.debug("testAttributesInvaldatedOnError*******")
     self.verifyBasicConnectivity('yourdomain.cfg')
 
     # add one user to the directory

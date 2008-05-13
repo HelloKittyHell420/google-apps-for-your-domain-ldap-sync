@@ -836,7 +836,7 @@ class UserDB(utils.Configurable):
       self._UpdateAttrList(attrs)
 
   def SetMetaLastUpdated(self, dn, attrs):
-    """Sets the meta-last-updated field to the self.timestamp attribute in atts.
+    """Sets meta-last-updated field to the self.timestamp attribute in attrs.
     Args:
       dn - the dn of the userdb object to change
       attrs - the attributes from ldap corresponding to the userdb object

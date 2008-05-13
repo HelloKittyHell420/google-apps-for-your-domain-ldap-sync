@@ -99,6 +99,6 @@ def updateIfNoErrors():
     _set(NEXT_UPDATE_TIME)
 
 def GetBaseline():
-  """ Return the time that the new run started which is known as the 'baeline'.
+  """ Return the time that the new run started which is known as the 'baseline'.
   """
   return time.strftime('%Y%m%d%H%M%S', NEXT_UPDATE_TIME)
