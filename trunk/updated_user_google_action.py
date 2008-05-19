@@ -18,7 +18,6 @@
 """ Default action for users who've been updated
 
   UpdatedUserGoogleAction: the class implementing the default action
-** Consult <TBD> for overall documentation on this package.
 """
 
 
@@ -65,7 +64,7 @@ class UpdatedUserGoogleAction(google_action.GoogleAction):
       # report success
       logging.debug('updated %s' % self.attrs['GoogleUsername'])
       self._thread_stats.IncrementStat('updates', 1)
-      self._result_queue.PutResult(self.dn, 'updated')
+      self._result_queue.PutResult(self.dn, 'updated', None, attrs)
     except provisioning_errs.ProvisioningApiError, e:
       # report failure
       logging.error('error: %s' % str(e))

@@ -52,7 +52,6 @@ class ConfigError(Exception):
       '\n'.join(['%s:\t%s' % (k,v) for (k,v) in self._missing.iteritems()]))
 
 class Configurable(object):
-
   """ An object which can be configured via the utils.Config object.
   This is deliberately a "lightweight" object; it doesn't impose a lot of
   semantics on config variables. The values are fetched from the utils.Config
@@ -113,7 +112,6 @@ class Configurable(object):
         return messages.msg(messages.ERR_INVALID_VALUE, attr)
 
 class LogConfig(Configurable):
-
   """ Object whose sole purpose is to hold the logging configuration
   variables.
   """
