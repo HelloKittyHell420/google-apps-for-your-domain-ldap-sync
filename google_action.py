@@ -37,9 +37,8 @@ class GoogleAction(object):
     self._api = api
     self._result_queue = result_queue
     self._thread_stats = thread_stats
-    super(GoogleAction, self).__init__(api=api,
-                                    result_queue=result_queue,
-                                     **moreargs)
+    super(GoogleAction, self).__init__(api=api, result_queue=result_queue,
+                                       **moreargs)
 
   def Handle(self, dn, attrs):
     """ Handle a single user with Distinguished Name 'dn' and attributes

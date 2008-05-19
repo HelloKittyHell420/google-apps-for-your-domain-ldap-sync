@@ -277,9 +277,6 @@ class Commands(cmd.Cmd):
 
       # add in the condition for "> lastUpdate"
       search_filter = self.ldap_context.ldap_user_filter
-      attrTime = self.users.GetTimestampAttributeName()
-      if not attrTime:
-        attrTime = 'meta-last-updated'
       self.last_update = None
       if last_update_time.get():
         self.last_update = self._TimeFromLDAPTime(last_update_time.get())

@@ -22,7 +22,6 @@ import messages
 """ Contains superclass for GoogleResultHandler:
  class GoogleResultHandler: superclass for all "GoogleResultHandlers"
 
-** Consult <TBD> for overall documentation on this package.
 """
 
 class GoogleResultHandler(object):
@@ -45,27 +44,27 @@ class GoogleResultHandler(object):
                                   **moreargs)
     self._userdb = userdb
 
-  def Handle(self, dn, action, failure=None, object=None):
+  def Handle(self, dn, action, failure=None, attrs=None):
     """ Subclass may override this, but the default action, to clear
-    the meta-Google-action attribute, may be sufficient for
-    most applications.
+    the meta-Google-action attribute, may be sufficient for most applications.
     This method is called after the result has already been dequeued
     by another component in the system. There may be other instances
     of this method operating in different threads, so care must be taken
     to do things in a thread-safe way.
+
     Args:
       dn: distinguished name of the user
       action: one of the action types enumerated in userdb.UserDB
         ('added', 'updated', 'exited', 'renamed')
       failure: failure message, or None if successful
-      object: additional information passed by the google_action
-        handler. One example is the GoogleActionCheck object, which passes
-        back the account status from Google.
+      attrs: attributes for the ldap object passed by the google_action
+        handler. 
     """
     if failure:
       last_update_time.reportError()
-      logging.error('failure to handle \'%s\' on %s: %s' %
-                    (action, dn, failure))
+      logging.error(
+          'failure to handle \'%s\' on %s: %s' % (action, dn, failure))
+      self._userdb.UnsetMetaLastUpdated(dn)
     else:
       self._userdb.SetGoogleAction(dn, None)
       # rescorcio - identified a bug in that the tool would reexit already
@@ -74,10 +73,12 @@ class GoogleResultHandler(object):
       if action == 'exited':
         self._userdb.SetMetaAttribute(dn, 'meta-Google-action', 
             'previously-exited')
-      if object:
+      if attrs:
+        self._userdb.SetMetaLastUpdated(dn, attrs)
         if action == 'renamed' or action == 'added':
           # We should only ever change the old username on add or rename
-          self._userdb.SetMetaAttribute(dn, "meta-Google-old-username", object)
+          self._userdb.SetMetaAttribute(dn, "meta-Google-old-username", 
+              attrs['GoogleUsername'])
       logging.info(messages.MSG_SUCCESSFULLY_HANDLED  % (action, dn))
 
 if __name__ == '__main__':

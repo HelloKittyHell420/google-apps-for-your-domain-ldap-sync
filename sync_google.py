@@ -94,7 +94,6 @@ class ThreadStats(object):
     return copy_stats
 
 class SyncGoogle(utils.Configurable):
-
   """ Synchronizes the UserDB with Google Apps for Your Domain.
   The 'admin', 'password', and 'domain' properties must be set, either
   by their being in the config file 'config', or via direct attribute
@@ -147,12 +146,14 @@ class SyncGoogle(utils.Configurable):
                   'last_update_file': messages.MSG_SYNC_GOOGLE_LAST_UPDATE_FILE
                   }
 
-  def __init__(self, users, config, **moreargs):
+  def __init__(self, users, config, api=provisioning.API, **moreargs):
     """ Constructor
     Args:
       users: an instance of the UserDB object
       config: an instance of ConfigParser, which must have been
         initialized from its file(s) already.
+      api: an instance of the provisioning api to use when performing 
+        operations on google apps.
     """
     self.__admin = None
     self.__password = None
@@ -170,9 +171,10 @@ class SyncGoogle(utils.Configurable):
     self.queue_result = None
     self._apis = None
     self._gworkers = None
+    self.provisioning_api = api
+
     super(SyncGoogle, self).__init__(config=config,
-                                     config_parms=self.config_parms,
-                                     **moreargs)
+                                     config_parms=self.config_parms, **moreargs)
 
   def _GetLastupdatefile(self):
     return self.__last_update_file
@@ -368,9 +370,7 @@ max_threads)
     """
     self._config.TestConfig(self, ['admin', 'password', 'domain'])
     try:
-      api = provisioning.API(self.admin,
-                             self.password,
-                             self.domain)
+      api = provisioning.API(self.admin, self.password, self.domain)
       return api.RetrieveAccount(username)
     except provisioning_errs.ProvisioningApiError, e:
       logging.debug(str(e))
@@ -385,9 +385,7 @@ max_threads)
     """
     try:
       self._config.TestConfig(self, ['admin', 'password', 'domain'])
-      api = provisioning.API(self.admin,
-                             self.password,
-                             self.domain)
+      api = provisioning.API(self.admin, self.password, self.domain)
       del api
       return None
     except provisioning_errs.AuthenticationError, e:
@@ -495,8 +493,8 @@ max_threads)
       errs = None
       for ix in xrange(thread_count):
         try:
-          api = provisioning.API(self.admin, self.password,
-                                 self.domain)
+          api = self.provisioning_api.API(self.admin, self.password, 
+              self.domain)
           self.thread_stats.IncrementStat('authentications', 1)
         except provisioning_errs.ProvisioningApiError, e:
           errs = str(e)
