@@ -45,7 +45,7 @@ GoogleUsername          mail[:mail.find('@')]
 GoogleFirstName         givenName
 GoogleOldUsername               None
 GoogleLastName          sn
-GooglePassword          None
+GooglePassword          "password"
 GoogleApplyIPWhitelist          False
 Add users that match your user filter of
 (&(objectclass=organizationalPerson)(modifyTimestamp>=20061101185255.0Z))
@@ -172,7 +172,7 @@ Google suggests retaining the following attributes:
 Google suggests mapping Google attributes as follows:
 GoogleLastName          sn
 GoogleUsername          mail[:mail.find('@')]
-GooglePassword          None
+GooglePassword          "password"
 GoogleApplyIPWhitelist          False
 GoogleFirstName         givenName
 Google suggests as the "last updated" timestamp attribute:
@@ -190,7 +190,7 @@ Add users that match your user filter of
 with Google attributes mapped as follows:
 GoogleLastName          sn
 GoogleUsername          mail[:mail.find('@')]
-GooglePassword          None
+GooglePassword          "password"
 GoogleApplyIPWhitelist          False
 GoogleFirstName         givenName
 Add users that match your user filter of
@@ -250,6 +250,8 @@ Although the admin can always use  some other tool to read in the XML or CSV fil
   * GoogleLastName comes from the 'sn' (for 'surname') attribute.
   * GoogleUsername takes the 'mail' LDAP attribute and strips off the '@' and everything after it.
   * GoogleFirstName comes from the 'givenName' LDAP attribute.
+
+NOTE: do *not* user None for the GooglePassword.  Google Apps requires a password.  So you will need to set this to a string literal as shown in the examples in this document (*not recommended*), or write a Python expression based on your ldap attributes to come up with a password.  Alternatively, you can use a user_transformation_rule (as described elsewhere in this document) to contruct a password based upon some authoritative source source of information that only the user would know about him / herself.
 
 The admin can always modify the list of attributes and the mappings, whether or not he/she accepts the Google suggestions.
 Commands
@@ -338,7 +340,7 @@ ldap_port = 389
 loglevel = 11
 logfile = '/bob/log.txt'
 timestamp = 'modifyTimestamp'
-mapping = {'GoogleUsername': "mail[:mail.find('@')]", 'GoogleFirstName': 'givenName', 'GoogleLastName': 'sn', 'GooglePassword': None, 'GoogleApplyIPWhitelist': False}
+mapping = {'GoogleUsername': "mail[:mail.find('@')]", 'GoogleFirstName': 'givenName', 'GoogleLastName': 'sn', 'GooglePassword': '"password"', 'GoogleApplyIPWhitelist': False}
 ldap_host = 'yourldapserver.yourdomain.com'
 attrs = set(['cn', 'meta-last-updated', 'uidNumber', 'GoogleFirstName', 'gidNumber',  'GoogleApplyIPWhitelist', 'meta-Google-action', 'uid', 'GoogleUsername', 'displayName', 'modifyTimestamp', 'sn', 'mail', 'GoogleLastName', 'givenName', 'GooglePassword'])
 ldap_disabled_filter = '(objectclass=organizationalPerson)'
