@@ -251,7 +251,7 @@ Although the admin can always use  some other tool to read in the XML or CSV fil
   * GoogleUsername takes the 'mail' LDAP attribute and strips off the '@' and everything after it.
   * GoogleFirstName comes from the 'givenName' LDAP attribute.
 
-NOTE: do *not* user None for the GooglePassword.  Google Apps requires a password.  So you will need to set this to a string literal as shown in the examples in this document (*not recommended*), or write a Python expression based on your ldap attributes to come up with a password.  Alternatively, you can use a user_transformation_rule (as described elsewhere in this document) to contruct a password based upon some authoritative source source of information that only the user would know about him / herself.
+NOTE: do *not* use None for the GooglePassword.  Google Apps requires a password.  You will need to set this to a string literal as shown in the examples in this document (*not recommended*), or write a Python expression based on your ldap attributes to come up with a password.  Alternatively, you can use a user_transformation_rule (as described elsewhere in this document) to contruct a password based upon some authoritative source of information that only the user would know about him / herself.
 
 The admin can always modify the list of attributes and the mappings, whether or not he/she accepts the Google suggestions.
 Commands
