@@ -1,5 +1,5 @@
 #
-# Copyright 2006 Google, Inc.
+# Copyright 2008 Google, Inc.
 # All Rights Reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License")
@@ -15,16 +15,4 @@
 # limitations under the License.
 #
 dn: CN=tuser,OU=${LDAPOU},${LDAPDN}
-givenName: tuser
-objectClass: top
-objectClass: person
-objectClass: organizationalPerson
-objectClass: user
-userAccountControl: 544
-cn: tuser
-distinguishedName: CN=tuser,
- OU=${LDAPOU},
- ${LDAPDN}
-name: tuser
-mailNickname: tuser
-mail: tuser@${MAILDOMAIN}
+givenName: Givenname¢
