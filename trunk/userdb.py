@@ -825,7 +825,8 @@ class UserDB(utils.Configurable):
               logging.debug('Replacing old userdb entry %s with %s' % 
                   (dnInUserDb, dn))
               old_username = self.db[dnInUserDb]['GoogleUsername']
-              meta_last_updated = self.db[dnInUserDb]['meta-last-updated']
+              if 'meta-last-updated' in self.db[dnInUserDb]:
+                meta_last_updated = self.db[dnInUserDb]['meta-last-updated']
               self.DeleteUser(dnInUserDb)
       self.db[dn] = self._MapUser(attrs)
       self._UpdatePrimaryKeyLookup(dn, attrs)
@@ -1155,8 +1156,10 @@ class UserDB(utils.Configurable):
       attrs = self.db[dn]
       domNode = self._CreateUserDOM(doc, dn, attrs)
       top_node.appendChild(domNode)
-    f = codecs.open(fname, 'w', 'utf-8')
-    f.write(doc.toprettyxml(encoding="utf-8"))
+    #f = codecs.open(fname, 'w', 'utf-8')
+    f = codecs.open(fname, 'w')
+    utf_8_pretty_xml = doc.toprettyxml(encoding='utf-8')
+    f.write(utf_8_pretty_xml)
     f.close()
 
   """

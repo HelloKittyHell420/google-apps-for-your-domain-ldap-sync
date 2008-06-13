@@ -18,8 +18,6 @@
 """ Default action for users who've been added.
 
   AddedUserGoogleAction: the class implementing the default action
-
-** Consult <TBD> for overall documentation on this package.
 """
 
 import google_action
@@ -92,6 +90,7 @@ class AddedUserGoogleAction(google_action.GoogleAction):
             self.attrs['GoogleUsername'])
         self._api.UnlockAccount(self.attrs['GoogleUsername'])
 
+        logging.debug('Updating account %s' % self.dn)
         # Make sure that the user's attributes are synced because there is 
         # no other time that this will get done.
         try:
@@ -102,13 +101,16 @@ class AddedUserGoogleAction(google_action.GoogleAction):
           self._result_queue.PutResult(self.dn, 'added', str(e))
           return
 
+        logging.debug('Marking account %s add a success' % self.dn)
+
         # trying to add a user that is already there is not an error
-        self._result_queue.PutResult(self.dn, 'added')
+        self._result_queue.PutResult(self.dn, 'added', None, self.attrs)
+        self._thread_stats.IncrementStat('adds', 1)
+        return
 
       logging.error('error: %s' % str(e))
       self._thread_stats.IncrementStat('add_fails', 1)
       self._result_queue.PutResult(self.dn, 'added', str(e))
-      return
 
 if __name__ == '__main__':
   pass

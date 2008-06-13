@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-dn: CN=tuser,OU=Unittest,${LDAPDN},DC=COM
+dn: CN=tuser,OU=${LDAPOU},${LDAPDN}
 givenName: tuser
 objectClass: top
 objectClass: person
@@ -23,8 +23,9 @@ objectClass: user
 userAccountControl: 544
 cn: tuser
 sn: tuser
-distinguishedName: CN=tuser,OU=Unittest,${LDAPDN},DC
- =com
+distinguishedName: CN=tuser,
+ OU=${LDAPOU},
+ ${LDAPDN}
 name: tuser
 mailNickname: tuser
 displayName: tuser

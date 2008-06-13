@@ -1,4 +1,4 @@
-s/${LDAPSERVER}/active_directory.yourdomain.com/
+s/${LDAPSERVER}/ldap.yourdomain.com/
 s/${LDAPFILTER}/(\&(objectClass=organizationalPerson)(userAccountControl:1.2.840.113556.1.4.804:=512))/
 s/${LDAPADMIN}/CN=ad-admin,CN=Users,${LDAPDN},DC=COM/
 s/${LDAPDISABLEDFILTER}/(\&(objectClass=organizationalPerson)(badPwdCount>=1))/
@@ -7,10 +7,14 @@ s/${LDAPPASSWORD}/Ld4pP@ssw0rd/
 s/${GOOGLEPASSWORD}/g00g13P@ssw0rd/
 s/${GOOGLEADMIN}/agent-name@${DOMAIN}/
 s/${DOMAIN}/yourdomain.com/
-s/${LDAPDN}/DC=yourdomain/
+s/${LDAPDN}/DC=yourdomain,DC=com/
 s/${QUOTA}/2048/
+s/${GOOGLEPASSWORDNOQUOTA}/g00g13P@ssw0rd/
+s/${GOOGLEADMINNOQUOTA}/no-quota-domain-admin@${DOMAINNOQUOTA}/
+s/${DOMAINNOQUOTA}/domainwithnoquota.com/
 s/${OPENLDAPSERVER}/openldap.yourdomain.com/
-s/${OPENLDAPFILTER}/(objectClass=person)/
-s/${OPENLDAPDN}/DC=yourdomain/
+s/${OPENLDAPFILTER}/(\&(objectClass=person)(uid=r*))/
+s/${OPENLDAPPASSWORD}//
 s/${OPENLDAPADMINNAME}//
-s/${OPENLDAPADMINPASSWORD}//
+s/${OPENLDAPDN}/dc=google,dc=com/
+s/${LDAPOU}/Unittest/

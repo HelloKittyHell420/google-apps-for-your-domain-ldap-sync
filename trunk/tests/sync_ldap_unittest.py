@@ -46,6 +46,7 @@ from src import utils
 import pprint
 import provisioning_api_mock
 import string
+import random
 
 from src import ldap_ctxt
 from src import commands
@@ -124,12 +125,12 @@ class SyncLdapUnitTest(unittest.TestCase):
     modlist = [(ldap.MOD_REPLACE, 'userAccountControl', str(acct))]
     self.ctxt.conn.modify_s(dn, modlist)
 
-  def CleanOutLDAP(self, query):
+  def CleanOutLDAP(self):
     """ for the current LDAP server (a connection to which must already be
     open, remove all objects passing the given filter)
-    Args:
-      query: LDAP search filter defining the users to be removed
     """
+    query = ('(&(objectClass=organizationalPerson)(cn=tuser%s*))' %
+        self.suffix)
     saved = self.ctxt.ldap_page_size
     self.ctxt.ldap_page_size = 1000   # in case there are a lot of leftovers
     dns = self.ctxt.Search(filter_arg=query, attrlist=[])
@@ -145,7 +146,7 @@ class SyncLdapUnitTest(unittest.TestCase):
       parser: a ModlistFromLDIF object,which should have already
         parsed an LDIF file.
       base: the base part of the user name, e.g. 'mailuser', which
-        presumably appears multiple times in the LDAP record
+        must match the ldif record username
       multiple: the number of unique copies of each user to make
       suffix: text to be appended to base to make it unique.  If none then
         self.suffix is used
@@ -158,7 +159,7 @@ class SyncLdapUnitTest(unittest.TestCase):
     for count in xrange(multiple):
       if not suffix:
         suffix = self.suffix
-      rep = '%s%d-%s' % (base, count, suffix)
+      rep = '%s%s%d' % (base, suffix, count)
       self.usernames_created.insert(0, rep)
       new_dn = dn.replace(base, rep)
       rmodlist = repr(modlist)
@@ -206,7 +207,7 @@ class SyncLdapUnitTest(unittest.TestCase):
           logging.debug('MOD_DELETE in ldap %s' % dn)
           self.ctxt.conn.delete_s(dn)
       else:
-        logging.debug('adding in ldap %s' % dn)
+        logging.debug('adding in ldap dn=%s' % dn)
         self.ctxt.conn.add_s(dn, modlist)
       changes.add(dn.lower())
     f.close()
@@ -239,6 +240,11 @@ class SyncLdapUnitTest(unittest.TestCase):
       self.password = self.cfg.GetAttr('password')
       self.cfg.TestConfig(self, ['admin', 'domain', 'password'])
       self.api = provisioning.API(self.admin, self.password, self.domain)
+
+  def InitTUserFilter(self):
+    self.cmd.onecmd(
+        'set ldap_user_filter (&%s(|(cn=tuser%s*)(cn=tuserb%s*)))' % (
+            self.ctxt.ldap_user_filter, self.suffix, self.suffix))
 
   def CompareUserdbToTarget(self, target):
     """ Check that the UserDB contains exactly the DNs
@@ -305,13 +311,14 @@ class SyncLdapUnitTest(unittest.TestCase):
     """
     self.datapath = os.path.join('.', "testdata")
     self.usernames_created = []
-    self.tmppath = '/var/log/'
+    self.tmppath = './'
     self.api = None
     self.skip_deleting_test_accounts = False
 
     # only want to do this once, so suffixes will stay the same
+    rand_gen = random.Random()
     if not hasattr(self, 'suffix'):
-      self.suffix = time.strftime('%Y-%m-%d-%H-%M-%S')
+      self.suffix = "%s" % rand_gen.randint(0, 1000000)
 
   def tearDown(self):
     provisioning_api_mock.CREATE_USER_EXCEPTION = None
@@ -350,8 +357,26 @@ class SyncLdapUnitTest(unittest.TestCase):
 
   def testAddsUpdatesAndRenamesWithNoPrimaryKey(self):
     """ Adds, updates and renames work on a CFG file with no primary key.  """
+    # TODO: this test is flakey.  Get ProvisioningApiError: Object does not
+    # exist error.  Often.
     logging.debug("testAddsUpdatesAndRenamesWithNoPrimaryKey: **********")
     self.verifyAddsUpdatesRenames('yourdomain.cfg', outfile='noprikey')
+
+  def testAddsUpdatesAndRenamesWithUtf8FirstAndLastNamesInXmlFile(self):
+    """ Adds, updates and renames work on a CFG file with no primary key in an
+    XML userdb.
+    """
+    logging.debug("testAddsUpdatesAndRenamesWithUtf8FirstAndLastNames: *******")
+    self.verifyAddsUpdatesRenames('yourdomain.cfg', 
+        ldifbasename='userspec_utf-8', outfile='utf-8')
+
+  def testAddsUpdatesAndRenamesWithUtf8FirstAndLastNamesInCsvFile(self):
+    """ Adds, updates and renames work on a CFG file with no primary key in a
+    CSV file.  
+    """
+    logging.debug("testAddsUpdatesAndRenamesWithUtf8FirstAndLastNames: *******")
+    self.verifyAddsUpdatesRenames('yourdomain.cfg', 
+        ldifbasename='userspec_utf-8', outfile='utf-8', ext='csv')
 
   def testLdapPagingForAddsModsAndRenames(self):
     """ Paging of LDAP results works for adds, renames, and updates.  """
@@ -412,16 +437,24 @@ class SyncLdapUnitTest(unittest.TestCase):
     logging.debug('attrs=%s' % str(attrs))
     self.assertActionIs(dn, 'previously-exited')
 
-  def assertActionIs(self, dn, action):
-    attrs = self.userdb.LookupDN(dn)
-    if not 'meta-Google-action' in attrs:
-      self.fail('Expected action %s' % action)
-    self.assertEqual(attrs['meta-Google-action'], action)
-
-  def assertActionIsNot(self, dn, action):
+  def IsAction(self, dn, action):
+    if self.isMetaGoogleActionEmpty(dn): 
+      logging.debug('IsAction: False')
+      return False
     attrs = self.userdb.LookupDN(dn)
     if 'meta-Google-action' in attrs:
-      self.assertNotEqual(attrs['meta-Google-action'], action)
+      logging.debug('IsAction %s == %s' % (action, attrs['meta-Google-action']))
+      if action == attrs['meta-Google-action']:
+        logging.debug('IsAction: True')
+        return True
+    logging.debug('IsAction: True')
+    return False
+
+  def assertActionIs(self, dn, action):
+    self.assertTrue(self.IsAction(dn, action))
+
+  def assertActionIsNot(self, dn, action):
+    self.assertFalse(self.IsAction(dn, action))
 
   def assertMetaLastUpdatedUnset(self, dn):
     attrs = self.userdb.LookupDN(dn)
@@ -511,11 +544,53 @@ class SyncLdapUnitTest(unittest.TestCase):
     # make sure added action was handled
     self.assertActionIsNot(dn, 'added')
 
+  def testUserAlreadyExistsErrorOnAddIsTreatedAsSuccess(self):
+    """ After UserAlreadyExists error during add the added action is cleared."""
+    logging.debug("testUserAlreadyExistsErrorOnAddIsTreatedAsSuccess*******")
+    self.verifyBasicConnectivity('yourdomain.cfg')
+
+    # add one user to the directory
+    added_dns = self.ModUsersLDAP('userspec.ldif', 'tuser', 1)
+
+    # pull in the users via updateUsers command
+    self.cmd.onecmd('updateUsers')
+
+    # write it out to a tempfile
+    self.cmd.onecmd('writeUsers %s' % self.GetTempFile('actncleared','1','xml'))
+
+    # do the sync to Google
+    self.cmd.onecmd('syncAllUsers')
+
+    dn = added_dns.pop()
+
+    # delete the user in userdb
+    self.userdb.DeleteUser(dn)
+
+    # Force ldap user time stamp to change so that it appears in the search.
+    # Because the userdb entry is deleted, it doesn't know this is a mod
+    # and treats it as an add
+    time.sleep(2)  # so as to detect a time difference in whenChanged!
+    mods = self.ModUsersLDAP('userspec-mod.ldif', 'tuser', 1, ldap.MOD_REPLACE)
+
+    # pull in the users via updateUsers command
+    self.cmd.onecmd('updateUsers')
+
+    # write it out to a tempfile
+    self.cmd.onecmd('writeUsers %s' % self.GetTempFile('actncleared','2','xml'))
+
+    # do the sync to Google, resulting in UserAlreadyExists error
+    self.cmd.onecmd('syncAllUsers')
+
+    # write it out to a tempfile
+    self.cmd.onecmd('writeUsers %s' % self.GetTempFile('actncleared','3','xml'))
+
+    # make sure added action is cleared
+    self.assertActionIsNot(dn, 'added')
+
   def testAddedActionPreservedAfterError(self):
     """ After an error during add the added action remains as long as it is 
     not handled."""
-    logging.debug(
-        "testAddedActionPreservedAfterError*******")
+    logging.debug("testAddedActionPreservedAfterError*******")
     self.verifyBasicConnectivity('yourdomain.cfg')
 
     # add one user to the directory
@@ -538,6 +613,12 @@ class SyncLdapUnitTest(unittest.TestCase):
     # delete the user in userdb
     self.userdb.DeleteUser(dn)
 
+    # Force ldap user time stamp to change so that it appears in the search.
+    # Because the userdb entry is deleted, it doesn't know this is a mod
+    # and treats it as an add
+    time.sleep(2)  # so as to detect a time difference in whenChanged!
+    mods = self.ModUsersLDAP('userspec-mod.ldif', 'tuser', 1, ldap.MOD_REPLACE)
+
     # pull in the users via updateUsers command
     self.cmd.onecmd('updateUsers')
 
@@ -547,6 +628,9 @@ class SyncLdapUnitTest(unittest.TestCase):
     # do the sync to Google, resulting in DeletedUserExists error
     self.cmd.onecmd('syncAllUsers')
 
+    # write it out to a tempfile
+    self.cmd.onecmd('writeUsers %s' % self.GetTempFile('actnpersist','3','xml'))
+
     # make sure added action is still shown 
     self.assertActionIs(dn, 'added')
 
@@ -554,7 +638,7 @@ class SyncLdapUnitTest(unittest.TestCase):
     self.cmd.onecmd('updateUsers')
 
     # write it out to a tempfile
-    self.cmd.onecmd('writeUsers %s' % self.GetTempFile('actnpersist','3','xml'))
+    self.cmd.onecmd('writeUsers %s' % self.GetTempFile('actnpersist','4','xml'))
 
     # do the sync to Google, resulting in DeletedUserExists error
     self.cmd.onecmd('syncAllUsers')
@@ -811,10 +895,10 @@ class SyncLdapUnitTest(unittest.TestCase):
     """ Deletion of user in ldap propagates to google apps """
     logging.debug("testDeleteOfUser: **********")
     self.InitWithCfg('yourdomain.cfg', True)
+    self.InitTUserFilter()
     
     # clean out all the DNs currently in this branch of the tree
-    logging.debug('--- cleanning up users in this part of ldap tree')
-    self.CleanOutLDAP('(objectclass=organizationalPerson)')
+    self.CleanOutLDAP()
 
     # add some users to the directory
     added = self.ModUsersLDAP('userspec.ldif', 'tuser', 1)
@@ -860,9 +944,10 @@ class SyncLdapUnitTest(unittest.TestCase):
     """ test that connecting to ldap works 
     """
     self.InitWithCfg(file, True)
+    self.InitTUserFilter()
 
     # clean out all the DNs currently in this branch of the tree
-    self.CleanOutLDAP('(objectclass=organizationalPerson)')
+    self.CleanOutLDAP()
 
     # test connection
     self.cmd.onecmd('connect')
@@ -964,7 +1049,7 @@ class SyncLdapUnitTest(unittest.TestCase):
       self.assertEqual(str(gattrs['firstName']), attrs['GoogleFirstName'])
 
   def addUsersAndVerifyTheyShowInUserDb(self, file, ldifbasename='userspec',
-      usersadded=2):
+      usersadded=2, outfile='basic'):
     self.verifyBasicConnectivity(file)
 
     # add some users to the directory
@@ -974,7 +1059,7 @@ class SyncLdapUnitTest(unittest.TestCase):
     self.cmd.onecmd('updateUsers')
 
     # write it out to a tempfile
-    self.cmd.onecmd('writeUsers %s' % self.GetTempFile('basic','1','xml'))
+    self.cmd.onecmd('writeUsers %s' % self.GetTempFile(outfile,'1','xml'))
 
     # we should now have exactly the ones we added in our userdb:
     (userdb_not_in_added, added_not_in_userdb) = (
@@ -984,9 +1069,16 @@ class SyncLdapUnitTest(unittest.TestCase):
     return added_dns
 
   def verifyAddsUpdatesRenames(self, file, ldifbasename='userspec', 
-      usersadded=2, usersmoded=1, outfile='basic'):
+      usersadded=2, usersmoded=1, outfile='basic', userbasename='tuser', 
+      ext='xml'):
+
+    self.verifyAdds(file, ldifbasename, usersadded, outfile, ext=ext)
+    self.verifyUpdates(file, ldifbasename, usersmoded, outfile, ext=ext)
+    self.verifyRenames(file, ldifbasename, usersmoded, outfile, ext=ext)
+
+  def verifyAdds(self, file, ldifbasename, usersadded, outfile, ext='xml'):
     added_dns = self.addUsersAndVerifyTheyShowInUserDb(file, ldifbasename, 
-        usersadded)
+        usersadded, outfile=outfile)
 
     # unfortunately, AD will change this account, anywhere up to 30 seconds
     # later, and we really need things to stabilize for the time-based
@@ -998,8 +1090,9 @@ class SyncLdapUnitTest(unittest.TestCase):
     self.VerifyUsersInGoogle(added_dns)
 
     # write it out to a tempfile
-    self.cmd.onecmd('writeUsers %s' % self.GetTempFile(outfile, '1', 'xml'))
+    self.cmd.onecmd('writeUsers %s' % self.GetTempFile(outfile, 'add', ext))
 
+  def verifyUpdates(self, file, ldifbasename, usersmoded, outfile, ext='xml'):
     # now modify some of them, and make sure those get flagged properly
     time.sleep(2)  # so as to detect a time difference in whenChanged!
     mods = self.ModUsersLDAP('%s-mod.ldif' % ldifbasename, 'tuser', usersmoded, 
@@ -1007,13 +1100,13 @@ class SyncLdapUnitTest(unittest.TestCase):
     self.cmd.onecmd('updateUsers')
 
     # write it out to a tempfile
-    self.cmd.onecmd('writeUsers %s' % self.GetTempFile(outfile, '2', 'xml'))
+    self.cmd.onecmd('writeUsers %s' % self.GetTempFile(outfile, 'mod-1', ext))
 
     # do the sync to Google
     self.cmd.onecmd('syncAllUsers')
 
     # write it out to a tempfile
-    self.cmd.onecmd('writeUsers %s' % self.GetTempFile(outfile, '3', 'xml'))
+    self.cmd.onecmd('writeUsers %s' % self.GetTempFile(outfile, 'mod-2', ext))
 
     # we should have the users we just modded as 'update'
     for dn in mods:
@@ -1026,11 +1119,12 @@ class SyncLdapUnitTest(unittest.TestCase):
       gattrs = self.api.RetrieveAccount(attrs['GoogleUsername'])
       logging.debug('gattrs=%s' % str(gattrs))
       self.assertNotEqual(gattrs, None)
-      self.assertEqual(str(gattrs['firstName']), attrs['GoogleFirstName'])
+      self.assertEqual(gattrs['firstName'], attrs['GoogleFirstName'])
 
     # write it out to a tempfile
-    self.cmd.onecmd('writeUsers %s' % self.GetTempFile(outfile, '4', 'xml'))
+    self.cmd.onecmd('writeUsers %s' % self.GetTempFile(outfile, 'mod-3', ext))
 
+  def verifyRenames(self, file, ldifbasename, usersmoded, outfile, ext='xml'):
     # now force a rename:
     time.sleep(2)  # so as to detect a time difference in whenChanged!
     mods = self.ModUsersLDAP('%s-rename.ldif' % ldifbasename, 'tuser', 
@@ -1038,13 +1132,13 @@ class SyncLdapUnitTest(unittest.TestCase):
     self.cmd.onecmd('updateUsers')
 
     # write it out to a tempfile
-    self.cmd.onecmd('writeUsers %s' % self.GetTempFile(outfile, '5', 'xml'))
+    self.cmd.onecmd('writeUsers %s' % self.GetTempFile(outfile, 'ren-1', ext))
 
     # do the sync to Google
     self.cmd.onecmd('syncAllUsers')
 
     # write it out to a tempfile
-    self.cmd.onecmd('writeUsers %s' % self.GetTempFile(outfile, '6', 'xml'))
+    self.cmd.onecmd('writeUsers %s' % self.GetTempFile(outfile, 'ren-2', ext))
 
     # check the users we just modded & be sure they were renamed
     for dn in mods:
@@ -1061,8 +1155,9 @@ class SyncLdapUnitTest(unittest.TestCase):
     """
     logging.debug("testNoDisabledFilter: ************")
     self.InitWithCfg('yourdomain-no-disabled.cfg', True)
+    self.InitTUserFilter()
     # clean out all the DNs currently in this branch of the tree
-    self.CleanOutLDAP('(objectclass=organizationalPerson)')
+    self.CleanOutLDAP()
 
     # add two users to the directory
     added = self.ModUsersLDAP('no-disabled.ldif', 'tuser', 2)
@@ -1108,9 +1203,13 @@ class SyncLdapUnitTest(unittest.TestCase):
   def isMetaGoogleActionEmpty(self, dn): 
     attrs = self.userdb.LookupDN(dn)
     if not attrs:
+      logging.debug('isMetaGoogleActionEmpty: TRUE')
       return True
     if 'meta-Google-action' in attrs:
+      logging.debug('isMetaGoogleActionEmpty: action=%s' % 
+          attrs['meta-Google-action'])
       return not attrs['meta-Google-action']
+    logging.debug('isMetaGoogleActionEmpty: TRUE')
     return True
 
   def assertMetaGoogleActionNotEmpty(self, dn):
@@ -1125,19 +1224,23 @@ class SyncLdapUnitTest(unittest.TestCase):
       # all sorts of LDAP abuse:
       try:
         self.InitWithCfg('bad1.cfg')
+        self.InitTUserFilter()
         self.fail('should have failed for lack of ldap_url')
       except utils.ConfigError:
         pass
       try:
         self.InitWithCfg('bad2.cfg')
+        self.InitTUserFilter()
         self.fail('should have failed for lack of ldap_url')
       except utils.ConfigError:
         pass
 
       self.cmd.onecmd('updateUsers')
       self.InitWithCfg('bad6.cfg')
+      self.InitTUserFilter()
       self.cmd.onecmd('updateUsers')
       self.InitWithCfg('bad7.cfg')
+      self.InitTUserFilter()
       self.cmd.onecmd('updateUsers')
       self.cmd.onecmd('disconnect')
       self.cmd.onecmd('updateUsers')
@@ -1160,6 +1263,7 @@ class SyncLdapUnitTest(unittest.TestCase):
 
       # now read in a good config file, so we can try other stuff:
       self.InitWithCfg('yourdomain.cfg')
+      self.InitTUserFilter()
       self.cmd.onecmd('mapGoogleAttribute GoogleUsername mailNickname')
       # a non-existent attribute:
       self.cmd.onecmd('mapGoogleAttribute GoogleUsername lkjsdkljsdfjsdf')
@@ -1176,9 +1280,10 @@ class SyncLdapUnitTest(unittest.TestCase):
     """
     logging.debug("testSyncOne: **********")
     self.InitWithCfg('yourdomain.cfg', True)
+    self.InitTUserFilter()
 
     # clean out all the DNs currently in this branch of the tree
-    self.CleanOutLDAP('(objectclass=organizationalPerson)')
+    self.CleanOutLDAP()
 
     # add one user to the directory
     added = self.ModUsersLDAP('syncspec.ldif', 'tuser', 1)
