@@ -55,7 +55,6 @@ from xml.sax._exceptions import *
 
 
 def GetText(node_list):
-
   """ Collect the text from (possibly) multiple Text nodes inside an element,
   into a single string.
 
@@ -75,7 +74,6 @@ def GetText(node_list):
   return rc.strip()
 
 def GetTextFromNodeList(node_list):
-
   """ similar to the above, but handles the return value from
   a getElementsByTagName() call, which is itself a node list
   """
@@ -84,7 +82,6 @@ def GetTextFromNodeList(node_list):
   return GetText(node_list.item(0).childNodes)
 
 def SuggestGoogleUsername(dictLower):
-
   """ Suggest an expression to serve as the GoogleUsername
   attribute
   Args:
@@ -99,7 +96,6 @@ def SuggestGoogleUsername(dictLower):
     return 'sAMAccountName'
 
 def SuggestGoogleLastName(dictLower):
-
   """ Suggest an expression to serve as the GoogleLastname
   attribute
   Args:
@@ -112,7 +108,6 @@ def SuggestGoogleLastName(dictLower):
     return "sn"
 
 def SuggestGoogleQuota(dictLower):
-
   """ Suggest an expression to serve as the GoogleQuota.
 
   Args:
@@ -125,7 +120,6 @@ def SuggestGoogleQuota(dictLower):
     return "mailQuota"
 
 def SuggestGoogleFirstName(dictLower):
-
   """ Suggest an expression to serve as the GoogleFirstName
   attribute
   Args:
@@ -203,7 +197,6 @@ def AttrListCompare(attrList, first, second):
 
 
 class UserDB(utils.Configurable):
-
   """ Canonical dictionary of users & their LDAP attributes. This is NOT
   identical to the data structure returned by the ldap package, and in
   fact, this module insulates callers from that structure, and lets them
@@ -259,7 +252,7 @@ class UserDB(utils.Configurable):
                   'attrs': messages.MSG_USERDB_ATTRS,
                   'timestamp': messages.MSG_USERDB_TIMESTAMP}
 
-  meta_attrs = frozenset(('meta-last-updated', 'meta-Google-action', \
+  meta_attrs = frozenset(('meta-last-updated', 'meta-Google-action', 
                           'meta-Google-old-username'))
 
   # these are all the "Google actions" there are:
@@ -338,7 +331,6 @@ class UserDB(utils.Configurable):
   """
 
   def AddAttribute(self, attr):
-
     """ add another attribute to the set we maintain (and which
     get retrieved in future LDAP calls, although that's not the
     responsibility of this module)
@@ -594,7 +586,6 @@ class UserDB(utils.Configurable):
     return keys
 
   def WriteDataFile(self, fname):
-
     """ Write to a file, either XML or CSV (and the extension must be one
     or the other)
     Args;
@@ -623,6 +614,7 @@ class UserDB(utils.Configurable):
   change the comments to match it.
   *********************************************************************
   """
+
   def AnalyzeChangedUsers(self, other_db):
     """ For a list of users passing some filter meaning "changed recently",
     analyze each as to whether it represents (a) a change to an
@@ -654,8 +646,14 @@ class UserDB(utils.Configurable):
         it's a rename
       else if ANY Google attribute has changed
         it's an update
+      else if action is previously-exited
+        it's an add
+      else if meta-last-updated is None
+        the attributes reflect ldap and are not an accurate representation 
+          of Google apps 
+        it's an add (do not skip)
       else
-        ignore
+        ignore / skip
 
     Args:
       other_db: another instance of UserDB, presumably created by
@@ -696,11 +694,42 @@ class UserDB(utils.Configurable):
           renames.append(dn)
         elif self._GoogleAttrsCompare(dn, attrs):
           logging.debug('UPDATE! existing dn=%s same GoogleUsername '
-            ' attrs differ.' % dn)
+              ' attrs differ.' % dn)
           mods.append(dn)
+        elif self.__IsMetaGoogleAction('previously-exited', dn):
+          logging.debug(
+              'ADD! existing dn=%s, same attrs but previously-exited' % dn)
+          adds.append(dn)
+        elif not self.__HasMetaLastUpdated(dn): 
+          logging.debug(
+              'ADD! existing dn=%s, attrs invalid (no meta-last-updated)' % dn)
+          adds.append(dn)
         else:
           logging.debug('SKIPPING! existing dn=%s same attrs ' % dn)
     return (adds, mods, renames)
+  
+  def __IsMetaGoogleAction(self, action, dn):
+    """ Determine if meta-google-action is a specific value.
+
+    Args:
+      action The action to match.
+      dn The distinguished name of the userdb entry to check.
+    Return:
+      True if meta-Google-action matches 'action'.  False otherwise
+    """
+    if 'meta-Google-action' in self.db[dn]:
+      return self.db[dn]['meta-Google-action'] == action
+    return False
+
+  def __HasMetaLastUpdated(self, dn):
+    """ Determine if meta-Last-updated is set to a non-None, non-blank value.
+    Args:
+      dn The distinguished name of the userdb entry to check.
+    Return:
+      True if meta-Google-action is non-None and non-blank
+    """
+    return ('meta-last-updated' in self.db[dn] and 
+        self.db[dn]['meta-last-updated'])
 
   def _AnalyzeNewDN(self, dn_arg, attrs):
     """ See description of AnalyzeChangedUsers();  this handles the
@@ -758,28 +787,29 @@ class UserDB(utils.Configurable):
       if dn not in ldap_dns:
         logging.debug("%s is a deletion candidate self.db[dn]=" % 
             str(self.db[dn]))
-        if 'meta-Google-action' in self.db[dn]:
-          if self.db[dn]['meta-Google-action'] == 'previously-exited':
+        if self.__IsMetaGoogleAction('previously-exited', dn):
             logging.debug('Skipping exit.  Already exited %s' % dn)
             continue
         deleted.append(dn)
     return deleted
 
-  def MergeUsers(self, other_db):
+  def MergeUsers(self, userdbFromLdap):
     """ Merge another UserDB into this one.
     Unlike _AddUsers, which takes the native data structure returned by
     the ldap module, this takes another instance of UserDB.
     Args:
-      other_db: a second instance of UserDB.
+      userdbFromLdap: a second instance of UserDB.
     """
-    for (dn, attrs) in other_db.db.iteritems():
+    for (dn, attrs) in userdbFromLdap.db.iteritems():
 
       # need to preserve meta-Google-old-username, if old name & it exists:
       dn = dn.lower()
       old_username = None
+      meta_last_updated = None
       if dn in self.db:
         if 'meta-Google-old-username' in self.db[dn]:
           old_username = self.db[dn]['meta-Google-old-username']
+          meta_last_updated = self.db[dn]['meta-last-updated']
       else:
         logging.debug("%s not in userdb.  Checking if it changed" % dn)
         # Check if dn changed
@@ -795,14 +825,40 @@ class UserDB(utils.Configurable):
               logging.debug('Replacing old userdb entry %s with %s' % 
                   (dnInUserDb, dn))
               old_username = self.db[dnInUserDb]['GoogleUsername']
+              if 'meta-last-updated' in self.db[dnInUserDb]:
+                meta_last_updated = self.db[dnInUserDb]['meta-last-updated']
               self.DeleteUser(dnInUserDb)
       self.db[dn] = self._MapUser(attrs)
       self._UpdatePrimaryKeyLookup(dn, attrs)
-      self.SetMetaAttribute(dn, "meta-last-updated", attrs[self.timestamp]) 
-      if old_username is not None:
+      if old_username:
         self.db[dn]['meta-Google-old-username'] = old_username
+      if meta_last_updated:
+        self.db[dn]['meta-last-updated'] = meta_last_updated
       self._UpdateAttrList(attrs)
 
+  def SetMetaLastUpdated(self, dn, attrs):
+    """Sets meta-last-updated field to the self.timestamp attribute in attrs.
+    Args:
+      dn - the dn of the userdb object to change
+      attrs - the attributes from ldap corresponding to the userdb object
+    """
+    logging.debug("setting meta last updated on dn=%s" % dn)
+    if self.timestamp:
+      self.SetMetaAttribute(dn, "meta-last-updated", attrs[self.timestamp]) 
+      logging.debug("set meta last updated to %s" % attrs[self.timestamp])
+    else:
+      self.SetMetaAttribute(dn, "meta-last-updated", 
+          last_update_time.GetBaseline()) 
+      logging.debug("set meta last updated to %s" % 
+          last_update_time.GetBaseline())
+
+  def UnsetMetaLastUpdated(self, dn):
+    """Set meta-last-updated field to None.
+    Args:
+      dn - the dn of the userdb object to change
+    """
+    self.SetMetaAttribute(dn, "meta-last-updated", None)
+    
   def __str__(self):
     result = ''
     for (dn, attrs) in self.db.iteritems():
@@ -1100,8 +1156,10 @@ class UserDB(utils.Configurable):
       attrs = self.db[dn]
       domNode = self._CreateUserDOM(doc, dn, attrs)
       top_node.appendChild(domNode)
-    f = codecs.open(fname, 'w', 'utf-8')
-    f.write(doc.toprettyxml(encoding="utf-8"))
+    #f = codecs.open(fname, 'w', 'utf-8')
+    f = codecs.open(fname, 'w')
+    utf_8_pretty_xml = doc.toprettyxml(encoding='utf-8')
+    f.write(utf_8_pretty_xml)
     f.close()
 
   """
@@ -1138,8 +1196,6 @@ class UserDB(utils.Configurable):
       self.db[dn] = self._MapUser(attrs)
       self._UpdatePrimaryKeyLookup(dn, attrs)
 
-      # set the meta-attributes
-      self.SetMetaAttribute(dn, "meta-last-updated", now)
     if not foundAny:
       logging.warn(messages.MSG_EMPTY_LDAP_SEARCH_RESULT)
 
@@ -1298,7 +1354,6 @@ class UserDB(utils.Configurable):
         dictLower[attrLower] = attr
     mapping = self.mapping.copy()
 
-    # TODO(rescorcio) change this to key off the attribute list somehow
     if not mapping["GoogleUsername"]:
       mapping["GoogleUsername"] = SuggestGoogleUsername(dictLower)
     if not mapping["GoogleLastName"]:
