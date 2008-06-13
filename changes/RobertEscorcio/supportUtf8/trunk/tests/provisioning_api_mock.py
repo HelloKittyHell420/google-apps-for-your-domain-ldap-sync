@@ -1,6 +1,6 @@
 #!/usr/bin/python2.4
 #
-# Copyright 2006 Google Inc.
+# Copyright 2008 Google Inc.
 # All Rights Reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License")
@@ -14,6 +14,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+""" Mock provisioning.API which throws exceptions as configured.
+
+SetCreateUserException() will configure the mock to throw the named 
+exception when CreateAccountWithEmail() method is called on the API.
+"""
 
 from google.appsforyourdomain import provisioning
 

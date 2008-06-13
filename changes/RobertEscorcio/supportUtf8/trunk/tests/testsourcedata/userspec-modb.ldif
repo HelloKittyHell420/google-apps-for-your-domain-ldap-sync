@@ -14,5 +14,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-dn: CN=tuserb,OU=${LDAPOU},${LDAPDN},DC=COM
+dn: CN=tuserb,OU=${LDAPOU},${LDAPDN}
 givenName: Givenname

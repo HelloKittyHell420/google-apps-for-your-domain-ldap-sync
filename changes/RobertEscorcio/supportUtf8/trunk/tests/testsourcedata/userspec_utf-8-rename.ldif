@@ -1,5 +1,5 @@
 #
-# Copyright 2006 Google, Inc.
+# Copyright 2008 Google, Inc.
 # All Rights Reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License")
@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-dn: CN=tuser,OU=${LDAPOU},${LDAPDN},DC=COM
+dn: CN=tuser,OU=${LDAPOU},${LDAPDN}
 mail: newtuser@${MAILDOMAIN}
 
 

@@ -357,6 +357,8 @@ class SyncLdapUnitTest(unittest.TestCase):
 
   def testAddsUpdatesAndRenamesWithNoPrimaryKey(self):
     """ Adds, updates and renames work on a CFG file with no primary key.  """
+    # TODO: this test is flakey.  Get ProvisioningApiError: Object does not
+    # exist error.  Often.
     logging.debug("testAddsUpdatesAndRenamesWithNoPrimaryKey: **********")
     self.verifyAddsUpdatesRenames('yourdomain.cfg', outfile='noprikey')
 
@@ -435,16 +437,24 @@ class SyncLdapUnitTest(unittest.TestCase):
     logging.debug('attrs=%s' % str(attrs))
     self.assertActionIs(dn, 'previously-exited')
 
-  def assertActionIs(self, dn, action):
-    attrs = self.userdb.LookupDN(dn)
-    if not 'meta-Google-action' in attrs:
-      self.fail('Expected action %s' % action)
-    self.assertEqual(attrs['meta-Google-action'], action)
-
-  def assertActionIsNot(self, dn, action):
+  def IsAction(self, dn, action):
+    if self.isMetaGoogleActionEmpty(dn): 
+      logging.debug('IsAction: False')
+      return False
     attrs = self.userdb.LookupDN(dn)
     if 'meta-Google-action' in attrs:
-      self.assertNotEqual(attrs['meta-Google-action'], action)
+      logging.debug('IsAction %s == %s' % (action, attrs['meta-Google-action']))
+      if action == attrs['meta-Google-action']:
+        logging.debug('IsAction: True')
+        return True
+    logging.debug('IsAction: True')
+    return False
+
+  def assertActionIs(self, dn, action):
+    self.assertTrue(self.IsAction(dn, action))
+
+  def assertActionIsNot(self, dn, action):
+    self.assertFalse(self.IsAction(dn, action))
 
   def assertMetaLastUpdatedUnset(self, dn):
     attrs = self.userdb.LookupDN(dn)
@@ -556,6 +566,12 @@ class SyncLdapUnitTest(unittest.TestCase):
     # delete the user in userdb
     self.userdb.DeleteUser(dn)
 
+    # Force ldap user time stamp to change so that it appears in the search.
+    # Because the userdb entry is deleted, it doesn't know this is a mod
+    # and treats it as an add
+    time.sleep(2)  # so as to detect a time difference in whenChanged!
+    mods = self.ModUsersLDAP('userspec-mod.ldif', 'tuser', 1, ldap.MOD_REPLACE)
+
     # pull in the users via updateUsers command
     self.cmd.onecmd('updateUsers')
 
@@ -597,6 +613,12 @@ class SyncLdapUnitTest(unittest.TestCase):
     # delete the user in userdb
     self.userdb.DeleteUser(dn)
 
+    # Force ldap user time stamp to change so that it appears in the search.
+    # Because the userdb entry is deleted, it doesn't know this is a mod
+    # and treats it as an add
+    time.sleep(2)  # so as to detect a time difference in whenChanged!
+    mods = self.ModUsersLDAP('userspec-mod.ldif', 'tuser', 1, ldap.MOD_REPLACE)
+
     # pull in the users via updateUsers command
     self.cmd.onecmd('updateUsers')
 
@@ -606,6 +628,9 @@ class SyncLdapUnitTest(unittest.TestCase):
     # do the sync to Google, resulting in DeletedUserExists error
     self.cmd.onecmd('syncAllUsers')
 
+    # write it out to a tempfile
+    self.cmd.onecmd('writeUsers %s' % self.GetTempFile('actnpersist','3','xml'))
+
     # make sure added action is still shown 
     self.assertActionIs(dn, 'added')
 
@@ -613,7 +638,7 @@ class SyncLdapUnitTest(unittest.TestCase):
     self.cmd.onecmd('updateUsers')
 
     # write it out to a tempfile
-    self.cmd.onecmd('writeUsers %s' % self.GetTempFile('actnpersist','3','xml'))
+    self.cmd.onecmd('writeUsers %s' % self.GetTempFile('actnpersist','4','xml'))
 
     # do the sync to Google, resulting in DeletedUserExists error
     self.cmd.onecmd('syncAllUsers')
@@ -1178,9 +1203,13 @@ class SyncLdapUnitTest(unittest.TestCase):
   def isMetaGoogleActionEmpty(self, dn): 
     attrs = self.userdb.LookupDN(dn)
     if not attrs:
+      logging.debug('isMetaGoogleActionEmpty: TRUE')
       return True
     if 'meta-Google-action' in attrs:
+      logging.debug('isMetaGoogleActionEmpty: action=%s' % 
+          attrs['meta-Google-action'])
       return not attrs['meta-Google-action']
+    logging.debug('isMetaGoogleActionEmpty: TRUE')
     return True
 
   def assertMetaGoogleActionNotEmpty(self, dn):
