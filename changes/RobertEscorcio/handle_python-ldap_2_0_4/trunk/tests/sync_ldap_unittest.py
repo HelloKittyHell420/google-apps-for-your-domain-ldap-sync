@@ -364,6 +364,7 @@ class SyncLdapUnitTest(unittest.TestCase):
 
   def testAddsUpdatesAndRenamesWithUtf8FirstAndLastNamesInXmlFile(self):
     """ All operations work on an XML userdb containing utf8 chars. """
+    # TODO: this test is flakey
     logging.debug("testAddsUpdatesAndRenamesWithUtf8FirstAndLastNames: *******")
     self.verifyAddsUpdatesRenames('yourdomain.cfg', 
         ldifbasename='userspec_utf-8', outfile='utf-8')
@@ -887,6 +888,7 @@ class SyncLdapUnitTest(unittest.TestCase):
   def testRenamesWithObjectGUIDAsPrimaryKey(self):
     """ Adds, updates and renames work on a CFG file with objectGUID as primary
     key.  """
+    # TODO: this test is flakey.  Get "Object does not exist" error often
     logging.debug("testRenamesWithObjectGUIDAsPrimaryKey: **********")
     self.verifyAddsUpdatesRenames('objectGUID.cfg', outfile='objectguidprikey')
 

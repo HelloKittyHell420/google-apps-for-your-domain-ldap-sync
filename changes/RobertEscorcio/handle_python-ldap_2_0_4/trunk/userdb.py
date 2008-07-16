@@ -691,6 +691,7 @@ class UserDB(utils.Configurable):
           logging.debug('RENAME! existing dn=%s different userdb '
               'GoogleUsername=%s != ldap %s'  % 
               (dn, self.db[dn]['GoogleUsername'], attrs['GoogleUsername']))
+          self.__PrepareRename(dn)
           renames.append(dn)
         elif self._GoogleAttrsCompare(dn, attrs):
           logging.debug('UPDATE! existing dn=%s same GoogleUsername '
@@ -707,7 +708,13 @@ class UserDB(utils.Configurable):
         else:
           logging.debug('SKIPPING! existing dn=%s same attrs ' % dn)
     return (adds, mods, renames)
-  
+ 
+  def __PrepareRename(self, dn):
+    meta_attr = 'meta-Google-old-username'
+    self.db[dn][meta_attr] = self.db[dn]['GoogleUsername']
+    logging.debug('Saving old username %s for dn=%s in meta-Google-old-username'
+        % (self.db[dn]['GoogleUsername'], dn))
+
   def __IsMetaGoogleAction(self, action, dn):
     """ Determine if meta-google-action is a specific value.
 
@@ -754,8 +761,7 @@ class UserDB(utils.Configurable):
                 'GoogleUsername attrs same ' % dn)
             return None
         else:
-          meta_attr = 'meta-Google-old-username'
-          self.db[dn][meta_attr] = self.db[dn]['GoogleUsername']
+          self.__PrepareRename(dn)
           logging.debug('RENAME! dn=%s found by primary key, different '
               ' GoogleUsername attrs same ' % dn)
           return 'renamed'
