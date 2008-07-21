@@ -22,6 +22,7 @@ exception when CreateAccountWithEmail() method is called on the API.
 """
 
 from google.appsforyourdomain import provisioning
+from google.appsforyourdomain import provisioning_errs
 
 CREATE_USER_EXCEPTION = None
 EXCEPTION_ARGS = []
@@ -33,6 +34,9 @@ class API(provisioning.API):
     global EXCEPTION_ARGS
     if CREATE_USER_EXCEPTION != None:
       raise CREATE_USER_EXCEPTION(*EXCEPTION_ARGS)
+      # TODO: clean this up
+      #raise provisioning_errs.ProvisioningApiError('fake reason', 
+          #'fake message')
     super(API, self).CreateAccountWithEmail(firstname, lastname,
         password, username, quota)
 

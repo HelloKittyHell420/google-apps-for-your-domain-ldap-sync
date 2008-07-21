@@ -7,7 +7,6 @@
 
  GoogleAction: the superclass
 
-** Consult <TBD> for overall documentation on this package.
 """
 
 
@@ -20,8 +19,8 @@ class GoogleAction(object):
   """ Superclass for all "Google Actions", i.e. the class that knows what
   to do to the Google Apps for Your Domain domain
   for an "added" or "exited" (or whatever) user.
-  The class should normally not perform actions on the UserDB or LDAP, but should
-  instead rely on the handler on the other end of the google_result_queue
+  The class should normally not perform actions on the UserDB or LDAP, but 
+  should instead rely on the handler on the other end of the google_result_queue
   to do that. This permits differing numbers of threads for the two types
   of activity:  (1) talking to Google, and (2) maintaining local databases.
   """

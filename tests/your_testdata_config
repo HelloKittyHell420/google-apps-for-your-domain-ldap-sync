@@ -1,6 +1,6 @@
 s/${LDAPSERVER}/ldap.yourdomain.com/
 s/${LDAPFILTER}/(\&(objectClass=organizationalPerson)(userAccountControl:1.2.840.113556.1.4.804:=512))/
-s/${LDAPADMIN}/CN=ad-admin,CN=Users,${LDAPDN},DC=COM/
+s/${LDAPADMIN}/CN=ad-admin,CN=Users,${LDAPDN}/
 s/${LDAPDISABLEDFILTER}/(\&(objectClass=organizationalPerson)(badPwdCount>=1))/
 s/${MAILDOMAIN}/yourdomain.com/
 s/${LDAPPASSWORD}/Ld4pP@ssw0rd/

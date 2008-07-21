@@ -691,6 +691,7 @@ class UserDB(utils.Configurable):
           logging.debug('RENAME! existing dn=%s different userdb '
               'GoogleUsername=%s != ldap %s'  % 
               (dn, self.db[dn]['GoogleUsername'], attrs['GoogleUsername']))
+          self.__PrepareRename(dn)
           renames.append(dn)
         elif self._GoogleAttrsCompare(dn, attrs):
           logging.debug('UPDATE! existing dn=%s same GoogleUsername '
@@ -707,7 +708,13 @@ class UserDB(utils.Configurable):
         else:
           logging.debug('SKIPPING! existing dn=%s same attrs ' % dn)
     return (adds, mods, renames)
-  
+ 
+  def __PrepareRename(self, dn):
+    meta_attr = 'meta-Google-old-username'
+    self.db[dn][meta_attr] = self.db[dn]['GoogleUsername']
+    logging.debug('Saving old username %s for dn=%s in meta-Google-old-username'
+        % (self.db[dn]['GoogleUsername'], dn))
+
   def __IsMetaGoogleAction(self, action, dn):
     """ Determine if meta-google-action is a specific value.
 
@@ -754,8 +761,7 @@ class UserDB(utils.Configurable):
                 'GoogleUsername attrs same ' % dn)
             return None
         else:
-          meta_attr = 'meta-Google-old-username'
-          self.db[dn][meta_attr] = self.db[dn]['GoogleUsername']
+          self.__PrepareRename(dn)
           logging.debug('RENAME! dn=%s found by primary key, different '
               ' GoogleUsername attrs same ' % dn)
           return 'renamed'
@@ -1286,7 +1292,7 @@ class UserDB(utils.Configurable):
       attrs : iterable list of attribute names
     """
     new_attrs = set()
-    # de-Unicode them all
+    # de-Unicode them all  
     for attr in attrs:
       new_attrs.add(str(attr))
     self.attrs = self.attrs.union(new_attrs)
@@ -1366,6 +1372,21 @@ class UserDB(utils.Configurable):
       mapping["GoogleQuota"] = SuggestGoogleQuota(dictLower)
 
     return (trial, mapping)
+
+def toUnicode(value):
+  """ Tries to convert the value directly to unicode.  If this fails
+  (usually because a utf8 unicde value was converted directly to string using
+  str) convert it to unicode using the utf8 decoding.  
+
+  Args:
+    value: The string value to convert to unicode.
+  Returns:
+    Unicode version of the value
+  """
+  try:
+    return unicode(value)
+  except UnicodeDecodeError, e:
+    return value.decode('utf8')
 
 def _ConvertFromGuid(key):
   return _GuidRange(key, 0, 15)

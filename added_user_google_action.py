@@ -23,6 +23,7 @@
 import google_action
 import logging
 import updated_user_google_action
+import userdb
 from google.appsforyourdomain import provisioning
 from google.appsforyourdomain import provisioning_errs
 
@@ -63,8 +64,10 @@ class AddedUserGoogleAction(google_action.GoogleAction):
       moreargs = {}
       if 'GoogleQuota' in self.attrs:
         moreargs['quota'] = self.attrs['GoogleQuota']
-      self._api.CreateAccountWithEmail(self.attrs['GoogleFirstName'],
-          self.attrs['GoogleLastName'], self.attrs['GooglePassword'],
+      self._api.CreateAccountWithEmail(
+          userdb.toUnicode(self.attrs['GoogleFirstName']),
+          userdb.toUnicode(self.attrs['GoogleLastName']), 
+          self.attrs['GooglePassword'],
           self.attrs['GoogleUsername'], **moreargs)
       self._result_queue.PutResult(self.dn, 'added', None, self.attrs)
       self._thread_stats.IncrementStat('adds', 1)
@@ -95,7 +98,7 @@ class AddedUserGoogleAction(google_action.GoogleAction):
         # no other time that this will get done.
         try:
           updated_user_google_action.Update(self._api, attrs)
-        except provisioning_errs.ProvisioningApiError, e:
+        except Exception, e:
           logging.error('error during update: %s' % str(e)) 
           self._thread_stats.IncrementStat('add_fails', 1)
           self._result_queue.PutResult(self.dn, 'added', str(e))
@@ -109,6 +112,11 @@ class AddedUserGoogleAction(google_action.GoogleAction):
         return
 
       logging.error('error: %s' % str(e))
+      self._thread_stats.IncrementStat('add_fails', 1)
+      self._result_queue.PutResult(self.dn, 'added', str(e))
+
+    except Exception, e:
+      logging.error('error during add: %s' % str(e)) 
       self._thread_stats.IncrementStat('add_fails', 1)
       self._result_queue.PutResult(self.dn, 'added', str(e))
 
