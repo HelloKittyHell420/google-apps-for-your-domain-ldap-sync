@@ -40,8 +40,7 @@ class GoogleResultHandler(object):
     Args:
       userdb: the userdb.UserDB object
     """
-    super(GoogleResultHandler, self).__init__(userdb=userdb,
-                                  **moreargs)
+    super(GoogleResultHandler, self).__init__(userdb=userdb, **moreargs)
     self._userdb = userdb
 
   def Handle(self, dn, action, failure=None, attrs=None):
@@ -65,21 +64,21 @@ class GoogleResultHandler(object):
       logging.error(
           'failure to handle \'%s\' on %s: %s' % (action, dn, failure))
       self._userdb.UnsetMetaLastUpdated(dn)
-    else:
-      self._userdb.SetGoogleAction(dn, None)
-      # rescorcio - identified a bug in that the tool would reexit already
-      # exited users without this.  It did no harm but is annoying and fills 
-      # the log with junk.
-      if action == 'exited':
-        self._userdb.SetMetaAttribute(dn, 'meta-Google-action', 
-            'previously-exited')
-      if attrs:
-        self._userdb.SetMetaLastUpdated(dn, attrs)
-        if action == 'renamed' or action == 'added':
-          # We should only ever change the old username on add or rename
-          self._userdb.SetMetaAttribute(dn, "meta-Google-old-username", 
-              attrs['GoogleUsername'])
-      logging.info(messages.MSG_SUCCESSFULLY_HANDLED  % (action, dn))
+      return
+    self._userdb.SetGoogleAction(dn, None)
+    # rescorcio - identified a bug in that the tool would reexit already
+    # exited users without this.  It did no harm but is annoying and fills 
+    # the log with junk.
+    if action == 'exited':
+      self._userdb.SetMetaAttribute(dn, 'meta-Google-action', 
+          'previously-exited')
+    if attrs:
+      self._userdb.SetMetaLastUpdated(dn, attrs)
+      if action == 'renamed' or action == 'added':
+        # We should only ever change the old username on add or rename
+        self._userdb.SetMetaAttribute(dn, "meta-Google-old-username", 
+            attrs['GoogleUsername'])
+    logging.info(messages.MSG_SUCCESSFULLY_HANDLED  % (action, dn))
 
 if __name__ == '__main__':
   pass

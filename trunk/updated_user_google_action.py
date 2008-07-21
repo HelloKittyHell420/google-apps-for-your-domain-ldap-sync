@@ -23,6 +23,7 @@
 
 import google_action
 import logging
+import userdb
 from google.appsforyourdomain import provisioning
 from google.appsforyourdomain import provisioning_errs
 
@@ -44,9 +45,7 @@ class UpdatedUserGoogleAction(google_action.GoogleAction):
         for writing results back to a status handler
     """
     super(UpdatedUserGoogleAction, self).__init__(api=api,
-                                    result_queue=result_queue,
-                                    thread_stats=thread_stats,
-                                    **moreargs)
+        result_queue=result_queue, thread_stats=thread_stats, **moreargs)
     self._api = api
     self._result_queue = result_queue
 
@@ -65,11 +64,17 @@ class UpdatedUserGoogleAction(google_action.GoogleAction):
       logging.debug('updated %s' % self.attrs['GoogleUsername'])
       self._thread_stats.IncrementStat('updates', 1)
       self._result_queue.PutResult(self.dn, 'updated', None, attrs)
+
     except provisioning_errs.ProvisioningApiError, e:
       # report failure
       logging.error('error: %s' % str(e))
       self._thread_stats.IncrementStat('update_fails', 1)
       self._result_queue.PutResult(self.dn, 'updated', str(e))
+
+    except Exception, e:
+      logging.error('error during update: %s' % str(e)) 
+      self._thread_stats.IncrementStat('update_fails', 1)
+      self._result_queue.PutResult(self.dn, 'added', str(e))
 
 def Update(api, attrs):
   """ Update the Google Account given by dn with attrs.
@@ -82,7 +87,10 @@ def Update(api, attrs):
   fields = {}
   for (key, google_key) in mapping_for_updates.iteritems():
     if google_key in attrs and attrs[google_key]:
-      fields[key] = attrs[google_key]
+      if key == 'password':
+        fields[key] = attrs[google_key]
+      else:
+        fields[key] = userdb.toUnicode(attrs[google_key])
   logging.debug('about to UpdateAccount for %s' % attrs['GoogleUsername'])
   api.UpdateAccount(attrs['GoogleUsername'], fields)
 

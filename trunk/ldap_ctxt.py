@@ -25,12 +25,19 @@ class LdapContext:  class that encapsulates all LDAP info
 
 
 import ldap
-from ldap.controls import SimplePagedResultsControl
 import logging
 import messages
 import time
 import userdb
 import utils
+
+# The user may have requesting LDAP results paging, so try to load the
+# library for this.  But don't die yet if it's not available.
+try:
+  from ldap.controls import SimplePagedResultsControl
+except ImportError:
+  SimplePagedResultsControl = None
+
 
 SLEEP_TIME = 0.1
 TIMEOUT_SECS = 15
@@ -91,8 +98,8 @@ class LdapContext(utils.Configurable):
     elif self.tls_option == 'never':
       pass
     else:
-      logging.exception('option tls_option=%s was not understood' %
-                        self.tls_option)
+      logging.error('option tls_option=%s was not understood' %
+                    self.tls_option)
       return
 
     if self.tls_cacertdir:
@@ -173,70 +180,92 @@ class LdapContext(utils.Configurable):
     """
     self.ldap_user_filter = query
 
-  def AsyncSearch(self, filter_arg, sizelimit, attrlist=None):
-    """  Does an async search, which, at least currently, we have to do to
-    impose a sizelimit, since the 'sizelimit' argument on the search*()
-    calls doesn't appear to work.
+  def _AsyncSearch(self, query, sizelimit, attrlist=None):
+    """ Helper function that implements an async LDAP search for
+    the Search method below.
     Args:
+      query: LDAP filter to apply to the search
       sizelimit: max # of users to return.
       attrlist: list of attributes to return.  If null, all attributes
         are returned
     Returns:
-      a userdb.UserDB object, or None if errors are encountered
-    Raises:
-      utils.ConfigError: if any required config items are not present
-      RuntimeError: if not connected
+      A list of users, as returned by the LDAP search
     """
-    self._config.TestConfig(self, self._required_config)
-    query = filter_arg
-    if not query:
-      query = self.ldap_user_filter
-    if not query:
-      raise utils.ConfigError(['ldap_user_filter'])
-    if not self.conn:
-      raise RuntimeError('Not connected')
-    self.conn.network_timeout = self.ldap_timeout
-    try:
-      paged_results_control = SimplePagedResultsControl(
-          ldap.LDAP_CONTROL_PAGE_OID, True, (self.ldap_page_size, ''))
-      logging.debug('Search on %s for %s' % (self.ldap_base_dn, query))
-      users = []
-      ix = 0
-      while True: 
-        if self.ldap_page_size == 0:
-          serverctrls = []
-        else:
-          serverctrls = [paged_results_control]
-        msgid = self.conn.search_ext(self.ldap_base_dn, ldap.SCOPE_SUBTREE, 
-            query, attrlist=attrlist, serverctrls=serverctrls)
-        res = self.conn.result3(msgid=msgid, timeout=self.ldap_timeout)
-        unused_code, results, unused_msgid, serverctrls = res
-        for result in results:
-          ix += 1
-          users.append(result)
-          if sizelimit > 0 and ix >= sizelimit:
-            break
-        if sizelimit > 0 and ix >= sizelimit:
-          break
-        cookie = None 
-        for serverctrl in serverctrls:
-          if serverctrl.controlType == ldap.LDAP_CONTROL_PAGE_OID:
-            unused_est, cookie = serverctrl.controlValue
-            if cookie:
-              paged_results_control.controlValue = (self.ldap_page_size, cookie)
-            break
-        if not cookie:
-          break
-      if not users:
-        logging.warn(messages.MSG_EMPTY_LDAP_SEARCH_RESULT)
-    except ldap.INSUFFICIENT_ACCESS, e:
-      logging.exception('User %s lacks permission to do this search\n%s' %
-                        (self.ldap_admin_name, str(e)))
+    logging.debug('Search on %s for %s' % (self.ldap_base_dn, query))
+    msgid = self.conn.search_ext(self.ldap_base_dn, ldap.SCOPE_SUBTREE,
+                                 query, attrlist=attrlist)
+    users = []
+
+    # If we have a sizelimit, we'll get results one by one so that we
+    # can stop processing once we've hit the limit.
+    if sizelimit:
+      all = 0
+    else:
+      all = 1
+
+    while True:
+      restype, resdata = self.conn.result(msgid=msgid, all=all,
+                                          timeout=self.ldap_timeout)
+      users.extend(resdata)
+      if restype == ldap.RES_SEARCH_RESULT or not resdata:
+        break
+      if sizelimit and len(users) >= sizelimit:
+        self.conn.abandon_ext(msgid)
+        break
+      time.sleep(SLEEP_TIME)
+      
+    return users
+
+  def IsUsingLdapLibThatSupportsPaging(self):
+    return SimplePagedResultsControl
+
+  def _PagedAsyncSearch(self, query, sizelimit, attrlist=None):
+    """ Helper function that implements a paged LDAP search for
+    the Search method below.
+    Args:
+      query: LDAP filter to apply to the search
+      sizelimit: max # of users to return.
+      attrlist: list of attributes to return.  If null, all attributes
+        are returned
+    Returns:
+      A list of users as returned by the LDAP search
+    """
+    if not self.IsUsingLdapLibThatSupportsPaging():
+      logging.error('Your version of python-ldap is too old to support '
+                    'paged LDAP queries.  Aborting search.')
       return None
-    except ldap.LDAPError, e:
-      logging.exception('LDAP error searching %s: %s' % (query, str(e)))
-      return None
-    return userdb.UserDB(config=self._config, users=users)
+
+    paged_results_control = SimplePagedResultsControl(
+        ldap.LDAP_CONTROL_PAGE_OID, True, (self.ldap_page_size, ''))
+    logging.debug('Paged search on %s for %s' % (self.ldap_base_dn, query))
+    users = []
+    ix = 0
+    while True: 
+      if self.ldap_page_size == 0:
+        serverctrls = []
+      else:
+        serverctrls = [paged_results_control]
+      msgid = self.conn.search_ext(self.ldap_base_dn, ldap.SCOPE_SUBTREE, 
+          query, attrlist=attrlist, serverctrls=serverctrls)
+      res = self.conn.result3(msgid=msgid, timeout=self.ldap_timeout)
+      unused_code, results, unused_msgid, serverctrls = res
+      for result in results:
+        ix += 1
+        users.append(result)
+        if sizelimit and ix >= sizelimit:
+          break
+      if sizelimit and ix >= sizelimit:
+        break
+      cookie = None 
+      for serverctrl in serverctrls:
+        if serverctrl.controlType == ldap.LDAP_CONTROL_PAGE_OID:
+          unused_est, cookie = serverctrl.controlValue
+          if cookie:
+            paged_results_control.controlValue = (self.ldap_page_size, cookie)
+          break
+      if not cookie:
+        break
+    return users
 
   def Search(self, filter_arg=None, sizelimit=0, attrlist=None):
     """ Given the configured user search filter, return the list
@@ -253,9 +282,35 @@ class LdapContext(utils.Configurable):
       utils.ConfigError: if any required config items are not present
       RuntimeError:  if not connected
     """
+    self._config.TestConfig(self, self._required_config)
+    query = filter_arg
+    if not query:
+      query = self.ldap_user_filter
+    if not query:
+      raise utils.ConfigError(['ldap_user_filter'])
+    if not self.conn:
+      raise RuntimeError('Not connected')
+
+    self.conn.network_timeout = self.ldap_timeout
+
+    users = None
     try:
-      return self.AsyncSearch(filter_arg, sizelimit, attrlist=attrlist)
+      if self.ldap_page_size:
+        users = self._PagedAsyncSearch(query, sizelimit, attrlist=attrlist)
+      else:
+        users = self._AsyncSearch(query, sizelimit, attrlist=attrlist)
+      if users is None:
+        return None
+      if not users:
+        logging.warn(messages.MSG_EMPTY_LDAP_SEARCH_RESULT)
+
     except ldap.SIZELIMIT_EXCEEDED, e:
       logging.exception('Size limit exceeded on your server.  '
                         'Try setting ldap_page_size.  %s' % str(e))
-    return None
+    except ldap.INSUFFICIENT_ACCESS, e:
+      logging.exception('User %s lacks permission to do this search\n%s' %
+                        (self.ldap_admin_name, str(e)))
+    except ldap.LDAPError, e:
+      logging.exception('LDAP error searching %s: %s' % (query, str(e)))
+
+    return userdb.UserDB(config=self._config, users=users)

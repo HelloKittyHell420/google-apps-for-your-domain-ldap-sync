@@ -19,10 +19,8 @@
 
   GoogleResultQueue: queue for results from GoogleAction classes
 
-** Consult <TBD> for overall documentation on this package.
 """
 
-import logging
 import Queue
 
 class GoogleResultQueue(Queue.Queue):
@@ -33,7 +31,7 @@ class GoogleResultQueue(Queue.Queue):
   """
 
   def PutResult(self, dn, action, failure=None, object=None,
-          block=None, timeout=None):
+          block=True, timeout=None):
     """ Wrapper around the Queue.put() method, so as to specify
     the objects on the queue.
     Args:
@@ -51,7 +49,7 @@ class GoogleResultQueue(Queue.Queue):
     """
     self.put((dn, action, failure, object), block, timeout)
 
-  def GetResult(self, block=None, timeout=None):
+  def GetResult(self, block=True, timeout=None):
     """ Wrapper around the Queue.get() method
     Args:
       block, timeout: as described in Queue.get() method documentation
