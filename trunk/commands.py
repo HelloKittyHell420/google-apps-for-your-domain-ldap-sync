@@ -201,14 +201,14 @@ class Commands(cmd.Cmd):
     # do it again with a small set, but get all attrs this time
     try:
       print messages.msg(messages.ERR_TEST_FILTER_SAMPLING)
-      sample_full_attrs = self.ldap_context.AsyncSearch(rest,
+      sample_full_attrs = self.ldap_context.Search(rest,
            min(10, self.new_users.UserCount()))
       if not sample_full_attrs:
         return
 
       # and since 'all attrs' doesn't include important stuff like
       # the modifyTimestamp, we have to do that separately:
-      sample_top_attrs = self.ldap_context.AsyncSearch(rest, 1, ['+'])
+      sample_top_attrs = self.ldap_context.Search(rest, 1, ['+'])
       if not sample_top_attrs:
         return
     except utils.ConfigError,e:
