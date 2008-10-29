@@ -51,7 +51,7 @@ Add users that match your user filter of
 (&(objectclass=organizationalPerson)(modifyTimestamp>=20061101185255.0Z))
 with Google attributes mapped as follows:
 Added 11 new users and marked them for
-addition to Google Apps for Your Domain.  Total is now 707.
+addition to Google Apps.  Total is now 707.
 
 Found 45 users in database which
 have changed in LDAP, and marked them for updating in Google
@@ -197,7 +197,7 @@ Add users that match your user filter of
 (objectclass=organizationalPerson)
 with Google attributes mapped as follows:
 Added 706 new users and marked them for
-addition to Google Apps for Your Domain.  Total is now 706.
+addition to Google Apps.  Total is now 706.
 
 Command: writeUsers yourdomain.users.csv
 Writing user file to yourdomain.users.csv
@@ -277,7 +277,7 @@ EOF  help
 Command: help attrList
 Configures the LDAP attributes that are retrieved
 from your server and stored in the database and in your XML file.  If an
-attribute is not needed for configuring Google Apps for Your Domain,
+attribute is not needed for configuring Google Apps,
 consider removing it.
 Usage:
 attrList add <attrName>
@@ -530,15 +530,15 @@ User already present in UserDB and in Google:
 
 {{{
 Command: syncOneUser name=Anew User
-Now looking up 'anewuser' in Google Apps for Your Domain...
-Google Apps for Your Domain returned the following data:
+Now looking up 'anewuser' in Google Apps...
+Google Apps returned the following data:
 userName        : anewuser
 firstName       : Anew
 lastName        : google
 accountStatus   : unlocked
 emailLists      :
 aliases :
-Google Apps for Your Domain is up to date. No action needed.
+Google Apps is up to date. No action needed.
 }}}
 
 User's LDAP record has been changed (new first name):
@@ -566,8 +566,8 @@ The user record for cn=anew user,ou=unittest,dc=yourdomain,dc=com is now:
   'sn': 'Formeruser',
   'userPrincipalName': 'anewuser@yourdomain.com',
   'whenChanged': '20061130002558.0Z'}
-Now looking up 'anewuser' in Google Apps for Your Domain...
-Google Apps for Your Domain returned the following data:
+Now looking up 'anewuser' in Google Apps...
+Google Apps returned the following data:
 userName        : anewuser
 firstName       : Anew
 lastName        : google
@@ -608,8 +608,8 @@ The user record for cn=anew user,ou=unittest,dc=yourdomain,dc=com is now:
   'sn': 'Formeruser',
   'userPrincipalName': 'anewuser@yourdomain.com',
   'whenChanged': '20061130002558.0Z'}
-Now looking up 'anewuser' in Google Apps for Your Domain...
-Google Apps for Your Domain returned the following data:
+Now looking up 'anewuser' in Google Apps ...
+Google Apps  returned the following data:
 userName        : anewuser
 firstName       : Anewer
 lastName        : google
