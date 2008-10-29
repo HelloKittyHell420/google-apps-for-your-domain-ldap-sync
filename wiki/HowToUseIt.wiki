@@ -8,12 +8,12 @@
 
 ==Objective==
 
-The LDAP Synchronization Tool is designed to facilitate the initial provisioning of an enterprise on Google Apps For Your Domain ("GAFYD"), and ongoing maintainance thereafter.  Its goal is to be a scriptable tool which fits into an IT department's overall chain of tools for employee management, rather than an all-encompassing product.  For this reason, it does not have a GUI.  The intent is that the source code for the tool be made freely available.
+The LDAP Synchronization Tool is designed to facilitate the initial provisioning of an enterprise on Google Apps, and ongoing maintainance thereafter.  Its goal is to be a scriptable tool which fits into an IT department's overall chain of tools for employee management, rather than an all-encompassing product.  For this reason, it does not have a GUI.  The intent is that the source code for the tool be made freely available.
 
 ==Background==
 Many organizations use an LDAP server for maintaining and serving data on employees, computers, printers, mail accounts, and much more.  Particularly, almost any Windows shop is very likely using Exchange with ActiveDirectory. 
-Google Apps For Your Domain, aka GAFYD, currently has an administrative GUI, suitable for management of individual users with some bulk-upload capabilities, and a programmatic API.  This tool is intended to fill the gaps left by those methods, by permitting the enterprise admin to regularly synchronize the LDAP server with Google:  add new employees, remove terminated employees, and update employees whose data has changed.
-The tool uses only the GAFYD Provisioning API to talk to Google;  no other information is ever sent to Google.
+Google Apps currently has an administrative GUI, suitable for management of individual users with some bulk-upload capabilities, and a programmatic API.  This tool is intended to fill the gaps left by those methods, by permitting the enterprise admin to regularly synchronize the LDAP server with Google:  add new employees, remove terminated employees, and update employees whose data has changed.
+The tool uses only the Google Apps Provisioning API to talk to Google;  no other information is ever sent to Google.
 
 ==Overview==
 
@@ -28,7 +28,7 @@ It reads and writes its state to a CSV or XML file.  The overall workflow is:
 ==Sample workflows==
 To motivate the rest of this doc, here are two examples of how an admin might use the Tool:
 ===Steady state===
-In a steady state, the admin has previously mined the LDAP directory, added all the employees to GAFYD, and saved the users to a file 'yourdomain.users.csv'.  He/she has also saved a configuration file 'yourdomain.com.cfg'.  This workflow represents what would be done every day/week/whatever to sync up the LDAP directory with Google.
+In a steady state, the admin has previously mined the LDAP directory, added all the employees to Google Apps, and saved the users to a file 'yourdomain.users.csv'.  He/she has also saved a configuration file 'yourdomain.com.cfg'.  This workflow represents what would be done every day/week/whatever to sync up the LDAP directory with Google.
 The commands are shown in bold.
 
 {{{
@@ -81,7 +81,7 @@ Command: syncAllUsers
 # results not shown for privacy reasons
 }}}
 
-The syncAllUsers command would have authenticated with GAFYD, added the 11 new users, and updated the 45 whose information has changed.  The data file 'yourdomain.users.csv' is automatically saved upon exit.  Note that a perfectly reasonable variant on this workflow is to not do the syncAllUsers, and instead open up 'yourdomain.users.csv' in a CSV reader tool, and examine the 'meta-Google-action' column to make sure that the correct things will in fact be done by syncAllUsers.  The user might also want to run some other program on the CSV file, since the Tool really is just one part of a chain.
+The syncAllUsers command would have authenticated with Google Apps, added the 11 new users, and updated the 45 whose information has changed.  The data file 'yourdomain.users.csv' is automatically saved upon exit.  Note that a perfectly reasonable variant on this workflow is to not do the syncAllUsers, and instead open up 'yourdomain.users.csv' in a CSV reader tool, and examine the 'meta-Google-action' column to make sure that the correct things will in fact be done by syncAllUsers.  The user might also want to run some other program on the CSV file, since the Tool really is just one part of a chain.
 
 You may get an error similar to the following
 
@@ -213,7 +213,7 @@ Enter a file name: yourdomain.cfg
 
 Notes on the above commands:
 
-  # The testFilter command is very highly recommended for users who are not expert at LDAP.  First of all, it tries out the ldap_user_filter, which can be a very tricky thing to get right, so if you don't get back the number of users you were expecting, iterate on that.  Second, it takes a small sample of the users who did match your filter, looks at the attributes that were found on them, and guides you in choosing the ones that you'll actually want to keep.  Third, it makes an educated guess about the way to derive your GAFYD attributes from those.  Last, it suggests an LDAP attribute to use as the timestamp, which is critical in steady state operation for detecting users who have changed.
+  # The testFilter command is very highly recommended for users who are not expert at LDAP.  First of all, it tries out the ldap_user_filter, which can be a very tricky thing to get right, so if you don't get back the number of users you were expecting, iterate on that.  Second, it takes a small sample of the users who did match your filter, looks at the attributes that were found on them, and guides you in choosing the ones that you'll actually want to keep.  Third, it makes an educated guess about the way to derive your Google Apps attributes from those.  Last, it suggests an LDAP attribute to use as the timestamp, which is critical in steady state operation for detecting users who have changed.
   # The attrList remove commands just correct for the over-generosity of the "suggestions."   It's a good idea to remove unneeded attributes before retrieving users from LDAP, since it'll save time and storage space later.
 
 
@@ -359,8 +359,8 @@ These are, hopefully, pretty well explained just by their names:
   * root distinguished name (ldap_root_dn) under which all subsequent queries are issued
   * Password of the administrator (ldap_password)
   * Timeout for talking to the LDAP server (ldap_timeout)
-  * Filter for an employee who should be added to GAFYD (ldap_user_filter)
-  * Filter for an employee who has exited the company or otherwise become ineligible for GAFYD (ldap_disabled_filter)
+  * Filter for an employee who should be added to Google Apps (ldap_user_filter)
+  * Filter for an employee who has exited the company or otherwise become ineligible for Google Apps (ldap_disabled_filter)
   * Retrieve n results from the ldap server at a time (ldap_page_size).  This is required by directories like Active Directory which by default have a server-side limit of 1000 results per page.  If your directory does not need this you can leave this at the default of 0.
   * Require TLS negotiation for connecting to ldap (tls_option)
   * Location of the Certificate Authority certificate file directory (tls_cacertdir)
@@ -370,9 +370,9 @@ The ldap_disabled_filter in particular is optional.  It's intended for environme
 Google config variables
 These are only required when the syncAllUsers command is issued:
 
-  * admin : the name of the administrator for the GAFYD domain.
+  * admin : the name of the administrator for the Google Apps domain.
   * password: the admin's password
-  * domain: the GAFYD domain being administered
+  * domain: the Google Apps domain being administered
   * max_threads: (optional)  the maximum number of threads to be spawned for talking to Google.  The default is one for every 32 transactions to be carried out, to a maximum of 10.
 
 
@@ -380,7 +380,7 @@ These are only required when the syncAllUsers command is issued:
 Some of these could equally well be considered "LDAP variables", I suppose, but they're mainly looked at by the "userdb" module:
 
   * attrs: the set of user attributes to be fetched from LDAP and written to the CSV or XML file. 
-  * mapping:  the mapping from LDAP attributes to the GAFYD variables that are ultimately pushed to Google. 
+  * mapping:  the mapping from LDAP attributes to the Google Apps variables that are ultimately pushed to Google. 
   * primary_key:  (optional)  If supplied, this is the LDAP attribute of a user that never changes, even if the employee gets married, divorced, and changes every possible other attribute including "distinguishedName".  An example would be the "uid" or "employeeNumber" attribute.  The primary_key is helpful in finding users whose GoogleUsername must change;  without it, they may be incorrectly treated as an exit and a new hire.
   * timestamp: the LDAP attribute which is used on your system to record when a record was last changed.  This is critical since it's the way the Tool does the "Steady State" operation shown above.  Note the line "(&(objectclass=organizationalPerson)(modifyTimestamp>=20061101185255.0Z))" "modifyTimestamp" is the timestamp variable here.
 
